@@ -1,4 +1,4 @@
-package main
+package middlewares
 
 import (
 	logging "microAPI/logger"
@@ -8,7 +8,7 @@ import (
 
 type Middleware func(http.Handler) http.Handler
 
-func loggingMW(logger *logging.CustomLogger) Middleware {
+func Log(logger *logging.CustomLogger) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
@@ -18,7 +18,7 @@ func loggingMW(logger *logging.CustomLogger) Middleware {
 	}
 }
 
-func recoveringMW(logger *logging.CustomLogger) Middleware {
+func Recover(logger *logging.CustomLogger) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {

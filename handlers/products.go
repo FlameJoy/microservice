@@ -3,6 +3,7 @@ package handlers
 import (
 	"microAPI/data"
 	logging "microAPI/logger"
+	"microAPI/router"
 	"net/http"
 )
 
@@ -16,12 +17,9 @@ func NewProductHandler(l *logging.CustomLogger) *ProductHandler {
 	}
 }
 
-func (h *ProductHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-}
-
-func (h *ProductHandler) TestHandler(w http.ResponseWriter, r *http.Request) {
-
+func (h *ProductHandler) RegisterRoutes(rg *router.RouteGroup) {
+	products := rg.Group("/products")
+	products.GET("", h.GetProducts)
 }
 
 func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {

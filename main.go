@@ -4,8 +4,11 @@ import (
 	"context"
 	"flag"
 	"log"
+	"microAPI/handlers"
 	"microAPI/initializers"
 	logging "microAPI/logger"
+	"microAPI/middlewares"
+	"microAPI/router"
 	"net/http"
 	"os"
 	"os/signal"
@@ -31,15 +34,19 @@ func main() {
 
 	server := http.Server{
 		Addr:         os.Getenv("PORT"),
-		Handler:      recoveringMW(logger)(loggingMW(logger)(mux)),
+		Handler:      middlewares.Recover(logger)(middlewares.Log(logger)(mux)),
 		ReadTimeout:  time.Second * 10,
 		WriteTimeout: time.Second * 10,
 		IdleTimeout:  time.Second * 10,
 	}
 
-	// handler := NewHandler(logger)
+	apiV1 := router.NewRouteGroup("/api/v1", mux, logger)
 
-	registerHandler(mux, logger)
+	// Создаем обработчики
+	productsHandler := handlers.NewProductHandler(logger)
+
+	// Регистрация маршрутов
+	router.RegisterHandlers(apiV1, productsHandler)
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt)

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"microAPI/initializers"
+	logging "microAPI/logger"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,9 +18,9 @@ var (
 
 func main() {
 	flag.Parse()
-	logger := NewCustomLogger(log.New(os.Stdout, "", log.LstdFlags), INFO)
+	logger := logging.NewCustomLogger(log.New(os.Stdout, "", log.LstdFlags), logging.INFO)
 	if *debug {
-		logger.SetLevel(DEBUG)
+		logger.SetLevel(logging.DEBUG)
 	}
 
 	if err := initializers.LoadEnv(".env"); err != nil {
@@ -36,9 +37,9 @@ func main() {
 		IdleTimeout:  time.Second * 10,
 	}
 
-	handler := NewHandler(logger)
+	// handler := NewHandler(logger)
 
-	registerHandler(mux, handler)
+	registerHandler(mux, logger)
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt)

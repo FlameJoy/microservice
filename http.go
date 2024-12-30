@@ -1,12 +1,18 @@
 package main
 
 import (
+	"microAPI/handlers"
+	logging "microAPI/logger"
 	"net/http"
 	"strings"
 )
 
-func registerHandler(mux *http.ServeMux, h *handler) {
-	mux.HandleFunc("/test", h.testHandler)
+func registerHandler(mux *http.ServeMux, logger *logging.CustomLogger) {
+	ph := handlers.NewProductHandler(logger)
+	mux.HandleFunc("/product", ph.TestHandler)
+
+	products := NewRouteGroup("/products", mux, logger)
+	products.POST("/list", ph.GetProducts)
 }
 
 type RouteGroup struct {
@@ -14,10 +20,10 @@ type RouteGroup struct {
 	parent *RouteGroup
 	mws    []Middleware
 	mux    *http.ServeMux
-	logger *CustomLogger
+	logger *logging.CustomLogger
 }
 
-func NewRouteGroup(prefix string, mux *http.ServeMux, logger *CustomLogger) *RouteGroup {
+func NewRouteGroup(prefix string, mux *http.ServeMux, logger *logging.CustomLogger) *RouteGroup {
 	return &RouteGroup{
 		prefix: strings.TrimRight(prefix, "/"),
 		mux:    mux,
@@ -37,8 +43,20 @@ func (rg *RouteGroup) Group(pattern string) *RouteGroup {
 	}
 }
 
-func (rg *RouteGroup) Get(pattern string, handler http.Handler) {
+func (rg *RouteGroup) GET(pattern string, handler http.HandlerFunc) {
 	rg.Handle(http.MethodGet, pattern, handler)
+}
+
+func (rg *RouteGroup) POST(pattern string, handler http.HandlerFunc) {
+	rg.Handle(http.MethodPost, pattern, handler)
+}
+
+func (rg *RouteGroup) PUT(pattern string, handler http.HandlerFunc) {
+	rg.Handle(http.MethodPut, pattern, handler)
+}
+
+func (rg *RouteGroup) DELETE(pattern string, handler http.HandlerFunc) {
+	rg.Handle(http.MethodDelete, pattern, handler)
 }
 
 func (rg *RouteGroup) CollectMW() []Middleware {

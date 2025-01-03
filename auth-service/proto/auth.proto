@@ -6,7 +6,7 @@ option go_package = "./proto";
 
 service AuthService {
   rpc Login (LoginRequest) returns (LoginResponse);
-  rpc Register (RegisterRequest) returns (RegisterResponse);
+  rpc Register (RegRequest) returns (RegResponse);
 }
 
 message LoginRequest {
@@ -19,12 +19,12 @@ message LoginResponse {
   string message = 2;
 }
 
-message RegisterRequest {
+message RegRequest {
   string username = 1;
   string password = 2;
 }
 
-message RegisterResponse {
+message RegResponse {
   string message = 1;
 }
 

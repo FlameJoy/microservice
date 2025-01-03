@@ -16,6 +16,10 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+var (
+	GatewayServer *grpcServer
+)
+
 type grpcServer struct {
 	pbGateway.GatewayServiceServer
 	authClient pbAuth.AuthServiceClient
@@ -55,10 +59,12 @@ func (s *grpcServer) Login(ctx context.Context, req *pbGateway.GatewayLoginReque
 
 // Реализация метода Register через Auth-сервис
 func (s *grpcServer) Register(ctx context.Context, req *pbGateway.GatewayRegisterRequest) (*pbGateway.GatewayRegisterResponse, error) {
-	authReq := &pbAuth.RegisterRequest{
+	authReq := &pbAuth.RegRequest{
 		Username: req.Username,
 		Password: req.Password,
 	}
+
+	logger.Info("api gateway: starts gRPC server Register func")
 
 	authResp, err := s.authClient.Register(ctx, authReq)
 	if err != nil {
@@ -72,7 +78,8 @@ func (s *grpcServer) Register(ctx context.Context, req *pbGateway.GatewayRegiste
 
 func StartGRPCServer(address, authSvcAddr string, done chan os.Signal) {
 	// Создаём Gateway gRPC-сервер
-	gatewayServer, err := NewGRPCServer(authSvcAddr)
+	var err error
+	GatewayServer, err = NewGRPCServer(authSvcAddr)
 	if err != nil {
 		log.Fatalf("Failed to create gRPC server: %v", err)
 	}
@@ -85,7 +92,7 @@ func StartGRPCServer(address, authSvcAddr string, done chan os.Signal) {
 	grpcServer := grpc.NewServer()
 
 	// Регистрируем GatewayService
-	pbGateway.RegisterGatewayServiceServer(grpcServer, gatewayServer)
+	pbGateway.RegisterGatewayServiceServer(grpcServer, GatewayServer)
 
 	go func() {
 		logger.Info("gRPC Gateway server is running on %s", address)

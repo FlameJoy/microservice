@@ -87,12 +87,16 @@ func (rg *RouteGroup) DELETE(prefix string, handler http.HandlerFunc) {
 
 func registerHandlers(h *handler, mux *http.ServeMux) {
 
-	// API gatewai
-	// api := NewRouteGroup(mux, "/api/v1", h.logger)
+	// API gateway
+	api := NewRouteGroup(mux, "/api/v1", h.logger)
+
+	// mux.HandleFunc("/test", h.testHandler)
+
+	// api.GET("/test", h.testHandler)
 
 	// Auth/Reg
-	// auth := api.Group("/auth")
-	// auth.POST("", h.ProxyAuthReq)
-	// auth.POST("/register", h.ProxyRegReq)
+	auth := api.Group("/auth")
+	auth.POST("", h.ProxyAuthReq)
+	auth.POST("/register", h.ProxyRegReq)
 	// auth.POST("/recovery", h.ProxyRecoveryReq)
 }

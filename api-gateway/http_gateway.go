@@ -42,6 +42,10 @@ func StartHTTPServer(done chan os.Signal) {
 		IdleTimeout:  60 * time.Second,
 	}
 
+	h := NewHandler(logger)
+
+	registerHandlers(h, mux)
+
 	go func() {
 		logger.Info("API gateway starts in %s%s", domain, port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {

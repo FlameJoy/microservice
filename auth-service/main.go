@@ -2,64 +2,75 @@ package main
 
 import (
 	"context"
-	"flag"
+	"fmt"
 	"log"
+	"microsvc/auth-service/proto" // Путь к сгенерированным файлам gRPC
 	"microsvc/common/utils"
-	"microsvc/middleware"
-	"net/http"
+	"net"
 	"os"
-	"os/signal"
-	"time"
+
+	"google.golang.org/grpc"
 )
 
-var (
-	debug = flag.Bool("debug", false, "debugging code")
-)
+type AuthServer struct {
+	proto.UnimplementedAuthServiceServer
+}
+
+// Метод Login
+func (s *AuthServer) Login(ctx context.Context, req *proto.LoginRequest) (*proto.LoginResponse, error) {
+	// Здесь ваша логика для проверки логина пользователя
+	if req.Username == "admin" && req.Password == "password" {
+		return &proto.LoginResponse{Token: "some_token"}, nil
+	}
+	return nil, fmt.Errorf("invalid credentials")
+}
+
+// Метод Register
+func (s *AuthServer) Register(ctx context.Context, req *proto.RegRequest) (*proto.RegResponse, error) {
+
+	fmt.Println("auth svc: starts gRPC server Register func")
+	fmt.Println(req.Username)
+	fmt.Println(req.Password)
+
+	// Здесь ваша логика для регистрации нового пользователя
+	if req.Username != "" && req.Password != "" {
+		// Пример: добавление пользователя в базу данных
+		log.Printf("User %s registered successfully", req.Username)
+		return &proto.RegResponse{Message: "User registered successfully"}, nil
+	}
+	return nil, fmt.Errorf("invalid input")
+}
+
+// Запуск gRPC-сервера
+func StartGRPCServer(address string) error {
+	// Инициализация gRPC сервера
+	server := grpc.NewServer()
+
+	// Регистрация AuthService
+	proto.RegisterAuthServiceServer(server, &AuthServer{})
+
+	// Прослушивание на порту
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		return fmt.Errorf("failed to listen: %v", err)
+	}
+
+	log.Printf("Auth service is listening on %s", address)
+
+	// Запуск gRPC-сервера
+	if err := server.Serve(listener); err != nil {
+		return fmt.Errorf("failed to serve gRPC server: %v", err)
+	}
+
+	return nil
+}
 
 func main() {
-	flag.Parse()
-
+	// Логирование и старт сервера
 	logger := utils.NewLogger(utils.INFO, log.New(os.Stdout, "auth-service ", log.LstdFlags), false)
-	if *debug {
-		logger.SetLevel(utils.DEBUG)
+
+	// Запуск gRPC сервера на порту 50051
+	if err := StartGRPCServer(":50052"); err != nil {
+		logger.Fatal("Failed to start gRPC server: %v", err)
 	}
-
-	mux := http.NewServeMux()
-
-	err := utils.LoadEnv("./.env")
-	if err != nil {
-		logger.Fatal("LoadEnv error: %s", err)
-	}
-
-	port := os.Getenv("AUTH_SVC_PORT")
-	domain := os.Getenv("DOMAIN_NAME")
-
-	server := http.Server{
-		Addr:         port,
-		Handler:      middleware.RecoverMW(logger)(middleware.LoggerMW(logger)(mux)),
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  60 * time.Second,
-	}
-
-	done := make(chan os.Signal, 1)
-	signal.Notify(done, os.Interrupt)
-
-	go func() {
-		logger.Info("API gateway starts in %s%s", domain, port)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Could not listen server on %s: %v\n", port, err)
-		}
-	}()
-
-	<-done
-	logger.Info("Server is shutting down...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := server.Shutdown(ctx); err != nil {
-		logger.Fatal("Server shutdown failed: %v\n", err)
-	}
-	logger.Info("Server exited properly")
 }

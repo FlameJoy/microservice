@@ -1,65 +1,39 @@
 package main
 
 import (
-	"context"
-	"flag"
 	"log"
-	"microsvc/common/utils"
-	"microsvc/middleware"
-	"net/http"
 	"os"
 	"os/signal"
-	"time"
-)
-
-var (
-	debug = flag.Bool("debug", false, "debugging code")
+	"sync"
 )
 
 func main() {
-	flag.Parse()
+	var wg sync.WaitGroup
 
-	logger := utils.NewLogger(utils.INFO, log.New(os.Stdout, "gateway-api", log.LstdFlags), false)
-	if *debug {
-		logger.SetLevel(utils.DEBUG)
-	}
-
-	mux := http.NewServeMux()
-
-	err := utils.LoadEnv("../.env")
-	if err != nil {
-		logger.Fatal("LoadEnv error: %s", err)
-	}
-
-	port := os.Getenv("GATEWAY_PORT")
-	domain := os.Getenv("DOMAIN_NAME")
-
-	server := http.Server{
-		Addr:         port,
-		Handler:      middleware.RecoverMW(logger)(middleware.LoggerMW(logger)(mux)),
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  60 * time.Second,
-	}
-
+	// Завершение по сигналу
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt)
 
+	// HTTP-сервер
+	wg.Add(1)
 	go func() {
-		logger.Info("Server starts in %s%s", domain, port)
-		if err := server.ListenAndServe(); err != nil || err == http.ErrServerClosed {
-			logger.Fatal("Could not listen server on %s: %v\n", port, err)
-		}
+		defer wg.Done()
+		StartHTTPServer(done)
+	}()
+
+	// gRPC-сервер
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		StartGRPCServer(":50051", ":50052", done)
 	}()
 
 	<-done
-	logger.Info("Server is shutting down...")
+	log.Println("Shutting down servers...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	// Передаем сигнал всем горутинам для завершения
+	close(done)
 
-	if err := server.Shutdown(ctx); err != nil {
-		logger.Fatal("Server shutdown failed: %v\n", err)
-	}
-	logger.Info("Server exited properly")
+	wg.Wait()
+	log.Println("Servers exited properly")
 }

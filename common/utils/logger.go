@@ -99,11 +99,11 @@ func (l *CustomLogger) SetLevel(level int) {
 }
 
 func (l *CustomLogger) Debug(format string, v ...interface{}) {
-	l.logMessage(DEBUG, BRIGHT_CYAN, format, v...)
+	l.logMessage(DEBUG, BRIGHT_MAGENTA, format, v...)
 }
 
 func (l *CustomLogger) Info(format string, v ...interface{}) {
-	l.logMessage(INFO, WHITE, format, v...)
+	l.logMessage(INFO, CYAN, format, v...)
 }
 
 func (l *CustomLogger) Warn(format string, v ...interface{}) {
@@ -119,7 +119,7 @@ func (l *CustomLogger) Fatal(format string, v ...interface{}) {
 	os.Exit(1)
 }
 
-func (l *CustomLogger) logMessage(level int, format, color string, v ...interface{}) {
+func (l *CustomLogger) logMessage(level int, color, format string, v ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.level > level {
@@ -128,9 +128,9 @@ func (l *CustomLogger) logMessage(level int, format, color string, v ...interfac
 
 	var prefix string
 	if l.timestamp {
-		prefix = fmt.Sprintf("[%s%s\033[0m] | %s | ", color, levelMap[level], time.Now().Format("2006-01-02 15:04:05"))
+		prefix = fmt.Sprintf("[%s%s\033[0m] | %s |", color, levelMap[level], time.Now().Format("2006-01-02 15:04:05"))
 	} else {
-		prefix = fmt.Sprintf("[%s%s\033[0m] | ", color, levelMap[level])
+		prefix = fmt.Sprintf("[%s%s\033[0m] |", color, levelMap[level])
 	}
 
 	msg := fmt.Sprintf(format, v...)

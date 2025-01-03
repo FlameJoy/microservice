@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package gateway;
+
+option go_package = "./proto";
+
+service GatewayService {
+  rpc Login (GatewayLoginRequest) returns (GatewayLoginResponse);
+  rpc Register (GatewayRegisterRequest) returns (GatewayRegisterResponse);
+}
+
+message GatewayLoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message GatewayLoginResponse {
+  string token = 1;
+  string message = 2;
+}
+
+message GatewayRegisterRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message GatewayRegisterResponse {
+  string message = 1;
+}

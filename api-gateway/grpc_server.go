@@ -9,6 +9,7 @@ import (
 
 	pbGateway "microsvc/api-gateway/proto"
 	pbAuth "microsvc/auth-service/proto"
+	"microsvc/common/utils"
 
 	"net"
 
@@ -23,9 +24,10 @@ var (
 type grpcServer struct {
 	pbGateway.GatewayServiceServer
 	authClient pbAuth.AuthServiceClient
+	logger     *utils.CustomLogger
 }
 
-func NewGRPCServer(authSvcAddr string) (*grpcServer, error) {
+func NewGRPCServer(authSvcAddr string, logger *utils.CustomLogger) (*grpcServer, error) {
 	// Используем NewClient для подключения к Auth-сервису
 	conn, err := grpc.NewClient(authSvcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -36,6 +38,7 @@ func NewGRPCServer(authSvcAddr string) (*grpcServer, error) {
 
 	return &grpcServer{
 		authClient: authClient,
+		logger:     logger,
 	}, nil
 }
 
@@ -64,7 +67,7 @@ func (s *grpcServer) Register(ctx context.Context, req *pbGateway.GatewayRegiste
 		Password: req.Password,
 	}
 
-	logger.Info("api gateway: starts gRPC server Register func")
+	s.logger.Info("api gateway: starts gRPC server Register func")
 
 	authResp, err := s.authClient.Register(ctx, authReq)
 	if err != nil {
@@ -76,10 +79,10 @@ func (s *grpcServer) Register(ctx context.Context, req *pbGateway.GatewayRegiste
 	}, nil
 }
 
-func StartGRPCServer(address, authSvcAddr string, done chan os.Signal) {
+func StartGRPCServer(address, authSvcAddr string, done chan os.Signal, logger *utils.CustomLogger) {
 	// Создаём Gateway gRPC-сервер
 	var err error
-	GatewayServer, err = NewGRPCServer(authSvcAddr)
+	GatewayServer, err = NewGRPCServer(authSvcAddr, logger)
 	if err != nil {
 		log.Fatalf("Failed to create gRPC server: %v", err)
 	}

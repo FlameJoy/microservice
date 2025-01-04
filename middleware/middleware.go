@@ -13,7 +13,7 @@ func LoggerMW(logger *utils.CustomLogger) Middleware {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 			next.ServeHTTP(w, r)
-			logger.Info("%s | %s | %s | %s", r.Method, r.URL.Path, r.RequestURI, time.Since(start))
+			logger.Info("%s | %s | %s | %s", r.Method, r.URL.Path, r.RemoteAddr, time.Since(start))
 		})
 	}
 }

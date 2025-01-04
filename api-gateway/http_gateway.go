@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
-	"log"
 	"microsvc/common/utils"
 	"microsvc/middleware"
 	"net/http"
@@ -11,25 +9,9 @@ import (
 	"time"
 )
 
-var (
-	debug  = flag.Bool("debug", false, "debugging code")
-	logger *utils.CustomLogger
-)
-
-func StartHTTPServer(done chan os.Signal) {
-	flag.Parse()
-
-	logger = utils.NewLogger(utils.INFO, log.New(os.Stdout, "gateway-api ", log.LstdFlags), false)
-	if *debug {
-		logger.SetLevel(utils.DEBUG)
-	}
+func StartHTTPServer(done chan os.Signal, logger *utils.CustomLogger) {
 
 	mux := http.NewServeMux()
-
-	err := utils.LoadEnv("../.env")
-	if err != nil {
-		logger.Fatal("LoadEnv error: %s", err)
-	}
 
 	port := os.Getenv("GATEWAY_PORT")
 	domain := os.Getenv("DOMAIN_NAME")

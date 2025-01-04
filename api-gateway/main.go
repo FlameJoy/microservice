@@ -1,13 +1,31 @@
 package main
 
 import (
+	"flag"
 	"log"
+	"microsvc/common/utils"
 	"os"
 	"os/signal"
 	"sync"
 )
 
+var (
+	debug = flag.Bool("debug", false, "debugging code")
+)
+
 func main() {
+	flag.Parse()
+
+	logger := utils.NewLogger(utils.INFO, log.New(os.Stdout, "gateway-api ", log.LstdFlags), false)
+	if *debug {
+		logger.SetLevel(utils.DEBUG)
+	}
+
+	err := utils.LoadEnv("../.env")
+	if err != nil {
+		logger.Fatal("LoadEnv error: %s", err)
+	}
+
 	var wg sync.WaitGroup
 
 	// Завершение по сигналу
@@ -18,14 +36,14 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		StartHTTPServer(done)
+		StartHTTPServer(done, logger)
 	}()
 
 	// gRPC-сервер
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		StartGRPCServer(":50051", ":50052", done)
+		StartGRPCServer(":50051", ":50052", done, logger)
 	}()
 
 	<-done

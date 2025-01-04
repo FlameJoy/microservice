@@ -97,6 +97,6 @@ func registerHandlers(h *handler, mux *http.ServeMux) {
 	// Auth/Reg
 	auth := api.Group("/auth")
 	auth.POST("", h.ProxyAuthReq)
-	auth.POST("/register", h.ProxyRegReq)
+	auth.POST("/register", h.UserValidate(h.ProxyRegReq))
 	// auth.POST("/recovery", h.ProxyRecoveryReq)
 }

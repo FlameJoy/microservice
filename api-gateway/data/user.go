@@ -8,7 +8,7 @@ import (
 
 type User struct {
 	Name       string    `json:"name" validate:"required"`
-	Pswd       string    `json:"pwsd" validate:"required"`
+	Pswd       string    `json:"pswd" validate:"required"`
 	Email      string    `json:"email" validate:"required,email"`
 	Age        uint8     `json:"age" validate:"gte=0,lte=130"`
 	Role       string    `json:"role" validate:"required"`

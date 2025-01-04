@@ -34,6 +34,8 @@ func HttpRespErrRFC9457(handler, title string, err error, statusCode int, w http
 		Details:    err.Error(),
 		Instance:   r.Pattern,
 	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(problem)
 }

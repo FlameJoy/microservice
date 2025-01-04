@@ -1,11 +1,13 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
+	"microsvc/api-gateway/data"
 	"microsvc/api-gateway/proto"
 	"microsvc/common/utils"
 	"net/http"
+
+	validator "github.com/go-playground/validator/v10"
 )
 
 type handler struct {
@@ -18,34 +20,51 @@ func NewHandler(l *utils.CustomLogger) *handler {
 	}
 }
 
-type UserReg struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+func (h *handler) UserValidate(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		u := data.User{}
+
+		u.FromJSON(r.Body)
+
+		validate := validator.New(validator.WithRequiredStructEnabled())
+
+		if err := validate.Struct(u); err != nil {
+			utils.HttpRespErrRFC9457("UserValidate", "Validation error", err, http.StatusBadRequest, w, r, h.logger)
+		}
+
+		r.Context().Value()
+	})
 }
 
 func (h *handler) ProxyRegReq(w http.ResponseWriter, r *http.Request) {
-	u := UserReg{}
+	u := data.User{}
 
-	_ = json.NewDecoder(r.Body).Decode(&u)
-
-	ctx := context.Background()
-	req := proto.GatewayRegisterRequest{
-		Username: u.Username,
-		Password: u.Password,
+	err := u.FromJSON(r.Body)
+	if err != nil {
+		utils.HttpRespErrRFC9457("ProxyRegReq", "Decode error", err, http.StatusBadRequest, w, r, h.logger)
 	}
 
-	h.logger.Info("Received reg data, redirect to gRPC server")
+	ctx := r.Context()
+	req := proto.GatewayRegisterRequest{
+		Username: u.Name,
+		Password: u.Pswd,
+	}
+
+	h.logger.Info("Received registration data, redirect to gRPC server")
+
 	resp, err := GatewayServer.Register(ctx, &req)
 	if err != nil {
-		h.logger.Error("GatewayServer.Register error: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		utils.HttpRespErrRFC9457("ProxyRegReq", "GatewayServer.Register error", err, http.StatusInternalServerError, w, r, h.logger)
 		return
 	}
 
-	w.WriteHeader(200)
-
 	h.logger.Info("Received gRPC server response, send to client")
-	json.NewEncoder(w).Encode(&resp)
+
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(&resp); err != nil {
+		utils.HttpRespErrRFC9457("ProxyRegReq", "Encode error", err, http.StatusInternalServerError, w, r, h.logger)
+		return
+	}
 }
 
 func (h *handler) ProxyAuthReq(w http.ResponseWriter, r *http.Request) {

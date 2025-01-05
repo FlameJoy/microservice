@@ -1,16 +1,17 @@
 package main
 
 import (
-	"log"
 	"microsvc/auth-service/proto"
 	"microsvc/common/utils"
 	"net"
+	"os"
+	"os/signal"
 
 	"google.golang.org/grpc"
 )
 
 // Запуск gRPC-сервера
-func StartGRPCServer(address string, logger *utils.CustomLogger) error {
+func StartGRPCServer(address string, logger *utils.CustomLogger) {
 	// Инициализация gRPC сервера
 	server := grpc.NewServer()
 
@@ -20,17 +21,22 @@ func StartGRPCServer(address string, logger *utils.CustomLogger) error {
 	// Прослушивание на порту
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
-		logger.Error("failed to listen: %v", err)
-		return err
+		logger.Fatal("failed to listen: %v", err)
 	}
 
-	log.Printf("Auth service is listening on %s", address)
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt)
 
-	// Запуск gRPC-сервера
-	if err := server.Serve(listener); err != nil {
-		logger.Error("failed to serve gRPC server: %v", err)
-		return err
-	}
+	go func() {
+		logger.Info("gRPC auth svc server is running on %s", address)
+		if err := server.Serve(listener); err != nil {
+			logger.Fatal("Failed to serve gRPC server: %v", err)
+		}
+	}()
 
-	return nil
+	<-done
+
+	logger.Info("grpcServer is shutting down...")
+	server.GracefulStop()
+	logger.Info("grpcServer exited properly")
 }

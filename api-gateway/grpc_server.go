@@ -99,7 +99,6 @@ func StartGRPCServer(address, authSvcAddr string, done chan os.Signal, logger *u
 
 	go func() {
 		logger.Info("gRPC Gateway server is running on %s", address)
-		// log.Printf("gRPC Gateway server is running on %s", address)
 		if err := grpcServer.Serve(listener); err != nil {
 			log.Fatalf("Failed to serve gRPC: %v", err)
 		}

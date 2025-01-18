@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	GatewayService_Login_FullMethodName    = "/gateway.GatewayService/Login"
-	GatewayService_Register_FullMethodName = "/gateway.GatewayService/Register"
+	GatewayService_Login_FullMethodName       = "/gateway.GatewayService/Login"
+	GatewayService_Register_FullMethodName    = "/gateway.GatewayService/Register"
+	GatewayService_CreateOrder_FullMethodName = "/gateway.GatewayService/CreateOrder"
 )
 
 // GatewayServiceClient is the client API for GatewayService service.
@@ -29,6 +30,7 @@ const (
 type GatewayServiceClient interface {
 	Login(ctx context.Context, in *GatewayLoginRequest, opts ...grpc.CallOption) (*GatewayLoginResponse, error)
 	Register(ctx context.Context, in *GatewayRegisterRequest, opts ...grpc.CallOption) (*GatewayRegisterResponse, error)
+	CreateOrder(ctx context.Context, in *GatewayOrderCreateReq, opts ...grpc.CallOption) (*GatewayOrderCreateResp, error)
 }
 
 type gatewayServiceClient struct {
@@ -59,12 +61,23 @@ func (c *gatewayServiceClient) Register(ctx context.Context, in *GatewayRegister
 	return out, nil
 }
 
+func (c *gatewayServiceClient) CreateOrder(ctx context.Context, in *GatewayOrderCreateReq, opts ...grpc.CallOption) (*GatewayOrderCreateResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GatewayOrderCreateResp)
+	err := c.cc.Invoke(ctx, GatewayService_CreateOrder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GatewayServiceServer is the server API for GatewayService service.
 // All implementations must embed UnimplementedGatewayServiceServer
 // for forward compatibility.
 type GatewayServiceServer interface {
 	Login(context.Context, *GatewayLoginRequest) (*GatewayLoginResponse, error)
 	Register(context.Context, *GatewayRegisterRequest) (*GatewayRegisterResponse, error)
+	CreateOrder(context.Context, *GatewayOrderCreateReq) (*GatewayOrderCreateResp, error)
 	mustEmbedUnimplementedGatewayServiceServer()
 }
 
@@ -80,6 +93,9 @@ func (UnimplementedGatewayServiceServer) Login(context.Context, *GatewayLoginReq
 }
 func (UnimplementedGatewayServiceServer) Register(context.Context, *GatewayRegisterRequest) (*GatewayRegisterResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
+}
+func (UnimplementedGatewayServiceServer) CreateOrder(context.Context, *GatewayOrderCreateReq) (*GatewayOrderCreateResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateOrder not implemented")
 }
 func (UnimplementedGatewayServiceServer) mustEmbedUnimplementedGatewayServiceServer() {}
 func (UnimplementedGatewayServiceServer) testEmbeddedByValue()                        {}
@@ -138,6 +154,24 @@ func _GatewayService_Register_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GatewayService_CreateOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GatewayOrderCreateReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayServiceServer).CreateOrder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GatewayService_CreateOrder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayServiceServer).CreateOrder(ctx, req.(*GatewayOrderCreateReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GatewayService_ServiceDesc is the grpc.ServiceDesc for GatewayService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -152,6 +186,10 @@ var GatewayService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Register",
 			Handler:    _GatewayService_Register_Handler,
+		},
+		{
+			MethodName: "CreateOrder",
+			Handler:    _GatewayService_CreateOrder_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

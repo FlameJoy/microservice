@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package order;
+
+option go_package = "./proto";
+
+service OrderService {
+    rpc Create (CreateReq) returns (CreateResp);
+    rpc Update (UpdateReq) returns (UpdateResp);
+    rpc Delete (DeleteReq) returns (DeleteResp);
+}
+
+message CreateReq {
+    int32 itemID = 1;
+    string name = 2;
+    int32 quantity = 3;
+    int32 price = 4;
+}
+
+message CreateResp {
+    int32 ID = 1;
+    string name = 2;
+    int32 totalSum = 3;
+}
+
+message UpdateReq {
+    int32 ID = 1;
+    string name = 2;
+    int32 quantity = 3;
+    int32 price = 4;
+}
+
+message UpdateResp {
+    int32 ID = 1;
+    string name = 2;
+    int32 totalSum = 3;
+}
+
+message DeleteReq {
+    int32 ID = 1;
+}
+
+message DeleteResp {
+    bool deleted = 1;
+    string message = 2;
+}
+

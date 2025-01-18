@@ -99,4 +99,8 @@ func registerHandlers(h *handler, mux *http.ServeMux) {
 	auth.POST("", h.ProxyAuthReq)
 	auth.POST("/register", h.UserValidate(h.ProxyRegReq))
 	// auth.POST("/recovery", h.ProxyRecoveryReq)
+
+	// Order
+	order := api.Group("/order")
+	order.POST("/create", h.OrderValidate(h.ProxyOrderCreate))
 }

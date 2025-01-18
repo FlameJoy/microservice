@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 
@@ -10,6 +11,7 @@ import (
 	pbGateway "microsvc/api-gateway/proto"
 	pbAuth "microsvc/auth-service/proto"
 	"microsvc/common/utils"
+	pbOrder "microsvc/order-service/proto"
 
 	"net"
 
@@ -23,22 +25,27 @@ var (
 
 type grpcServer struct {
 	pbGateway.GatewayServiceServer
-	authClient pbAuth.AuthServiceClient
-	logger     *utils.CustomLogger
+	authClient  pbAuth.AuthServiceClient
+	orderClient pbOrder.OrderServiceClient
+	logger      *utils.CustomLogger
 }
 
-func NewGRPCServer(authSvcAddr string, logger *utils.CustomLogger) (*grpcServer, error) {
+func NewGRPCServer(authSvcAddr string, orderSvcAddr string, logger *utils.CustomLogger) (*grpcServer, error) {
 	// Используем NewClient для подключения к Auth-сервису
-	conn, err := grpc.NewClient(authSvcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	authConn, err := grpc.NewClient(authSvcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
 
-	authClient := pbAuth.NewAuthServiceClient(conn)
+	authClient := pbAuth.NewAuthServiceClient(authConn)
+
+	orderConn, err := grpc.NewClient(orderSvcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	orderClient := pbOrder.NewOrderServiceClient(orderConn)
 
 	return &grpcServer{
-		authClient: authClient,
-		logger:     logger,
+		authClient:  authClient,
+		orderClient: orderClient,
+		logger:      logger,
 	}, nil
 }
 
@@ -79,10 +86,34 @@ func (s *grpcServer) Register(ctx context.Context, req *pbGateway.GatewayRegiste
 	}, nil
 }
 
-func StartGRPCServer(address, authSvcAddr string, done chan os.Signal, logger *utils.CustomLogger) {
+func (s *grpcServer) CreateOrder(ctx context.Context, req *pbGateway.GatewayOrderCreateReq) (*pbGateway.GatewayOrderCreateResp, error) {
+	orderReq := &pbOrder.CreateReq{
+		ItemID:   req.ItemID,
+		Name:     req.Name,
+		Quantity: req.Quantity,
+		Price:    req.Price,
+	}
+
+	s.logger.Info("api gateway: starts gRPC server CreateOrder func")
+
+	fmt.Println(orderReq)
+
+	orderResp, err := s.orderClient.Create(ctx, orderReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pbGateway.GatewayOrderCreateResp{
+		ID:       orderResp.ID,
+		Name:     orderResp.Name,
+		TotalSum: orderResp.TotalSum,
+	}, nil
+}
+
+func StartGRPCServer(address, authSvcAddr string, orderSvcAddr string, done chan os.Signal, logger *utils.CustomLogger) {
 	// Создаём Gateway gRPC-сервер
 	var err error
-	GatewayServer, err = NewGRPCServer(authSvcAddr, logger)
+	GatewayServer, err = NewGRPCServer(authSvcAddr, orderSvcAddr, logger)
 	if err != nil {
 		log.Fatalf("Failed to create gRPC server: %v", err)
 	}

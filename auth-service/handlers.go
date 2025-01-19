@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"microsvc/auth-service/proto"
 	"microsvc/common/utils"
+	"microsvc/storage"
 )
 
 type AuthServer struct {
 	proto.UnimplementedAuthServiceServer
-	logger *utils.CustomLogger
+	logger  *utils.CustomLogger
+	storage storage.Storage
 }
 
 func (s *AuthServer) Login(ctx context.Context, req *proto.LoginRequest) (*proto.LoginResponse, error) {

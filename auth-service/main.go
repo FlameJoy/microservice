@@ -3,7 +3,9 @@ package main
 import (
 	"log" // Путь к сгенерированным файлам gRPC
 	"microsvc/common/utils"
-	"microsvc/storage/postgres"
+	"microsvc/storage/clickhouse"
+
+	// "microsvc/storage/postgres"
 	"os"
 )
 
@@ -16,9 +18,10 @@ func main() {
 	}
 
 	// DB
-	config := postgres.FormConfig()
-	storage := postgres.NewStorage(logger, config)
-	storage.Migrate()
+	storage := clickhouse.NewStorage()
+	// config := postgres.FormConfig()
+	// storage := postgres.NewStorage(logger, config)
+	// storage.Migrate()
 	if err := storage.ConnToDB(); err != nil {
 		logger.Fatal("DB error: %v", err)
 	}

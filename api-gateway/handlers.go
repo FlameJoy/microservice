@@ -30,9 +30,20 @@ func (h *handler) UserValidate(next http.HandlerFunc) http.HandlerFunc {
 
 		u.FromJSON(r.Body)
 
-		validate := validator.New(validator.WithRequiredStructEnabled())
+		// Username validation
+		if err := u.ValidateUsername(); err != nil {
+			utils.HttpRespErrRFC9457("UserValidate", "Validation error", err, http.StatusBadRequest, w, r, h.logger)
+			return
+		}
 
-		if err := validate.Struct(u); err != nil {
+		// Email validation
+		if err := u.ValidateEmail(); err != nil {
+			utils.HttpRespErrRFC9457("UserValidate", "Validation error", err, http.StatusBadRequest, w, r, h.logger)
+			return
+		}
+
+		// Password validation
+		if err := u.ValidatePswd(); err != nil {
 			utils.HttpRespErrRFC9457("UserValidate", "Validation error", err, http.StatusBadRequest, w, r, h.logger)
 			return
 		}
@@ -52,8 +63,9 @@ func (h *handler) ProxyRegReq(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req := proto.GatewayRegisterRequest{
-		Username: u.Name,
+		Username: u.Username,
 		Password: u.Pswd,
+		Email:    u.Email,
 	}
 
 	h.logger.Info("Received registration data, redirect to gRPC server")

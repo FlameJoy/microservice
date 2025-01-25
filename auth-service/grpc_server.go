@@ -11,15 +11,11 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Запуск gRPC-сервера
 func StartGRPCServer(address string, logger *utils.CustomLogger, storage storage.Storage) {
-	// Инициализация gRPC сервера
 	server := grpc.NewServer()
 
-	// Регистрация AuthService
 	proto.RegisterAuthServiceServer(server, &AuthServer{logger: logger, storage: storage})
 
-	// Прослушивание на порту
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		logger.Fatal("failed to listen: %v", err)

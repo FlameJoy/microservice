@@ -130,3 +130,52 @@ func (ps *Storage) Close() error {
 func (ps *Storage) Ping() error {
 	return ps.db.Ping()
 }
+
+// ExecuteQuery - выполнение SQL-запроса (INSERT, UPDATE, DELETE)
+func (ps *Storage) ExecuteQuery(query string, args ...interface{}) error {
+	_, err := ps.db.Exec(query, args...)
+	return err
+}
+
+// GetData - выполнение SELECT-запроса и возврат данных
+func (ps *Storage) GetData(query string, args ...interface{}) ([]map[string]interface{}, error) {
+	rows, err := ps.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []map[string]interface{}
+
+	for rows.Next() {
+		values := make([]interface{}, len(columns))
+		valuePtrs := make([]interface{}, len(columns))
+
+		for i := range values {
+			valuePtrs[i] = &values[i]
+		}
+
+		if err := rows.Scan(valuePtrs...); err != nil {
+			return nil, err
+		}
+
+		row := make(map[string]interface{})
+		for i, col := range columns {
+			val := values[i]
+			if b, ok := val.([]byte); ok {
+				row[col] = string(b)
+			} else {
+				row[col] = val
+			}
+		}
+
+		result = append(result, row)
+	}
+
+	return result, nil
+}

@@ -72,6 +72,7 @@ func (s *grpcServer) Register(ctx context.Context, req *pbGateway.GatewayRegiste
 	authReq := &pbAuth.RegRequest{
 		Username: req.Username,
 		Password: req.Password,
+		Email:    req.Email,
 	}
 
 	s.logger.Info("api gateway: starts gRPC server Register func")

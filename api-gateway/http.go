@@ -90,15 +90,10 @@ func registerHandlers(h *handler, mux *http.ServeMux) {
 	// API gateway
 	api := NewRouteGroup(mux, "/api/v1", h.logger)
 
-	// mux.HandleFunc("/test", h.testHandler)
-
-	// api.GET("/test", h.testHandler)
-
 	// Auth/Reg
 	auth := api.Group("/auth")
 	auth.POST("", h.ProxyAuthReq)
 	auth.POST("/register", h.UserValidate(h.ProxyRegReq))
-	// auth.POST("/recovery", h.ProxyRecoveryReq)
 
 	// Order
 	order := api.Group("/order")

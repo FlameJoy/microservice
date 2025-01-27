@@ -26,7 +26,6 @@ func (ps *Storage) Migrate(migrationsDir string) error {
 
 	ps.logger.Info("Migrate...")
 
-	// Получаем список всех файлов в директории миграций
 	files, err := os.ReadDir(migrationsDir)
 	if err != nil {
 		return err
@@ -44,6 +43,8 @@ func (ps *Storage) Migrate(migrationsDir string) error {
 			return err
 		}
 	}
+
+	ps.logger.Info("Migration succesful")
 
 	return nil
 }
@@ -77,7 +78,6 @@ func (ps *Storage) createDBIfNotExist() error {
 	return nil
 }
 
-// executeSQLFile читает и выполняет SQL из файла
 func execSQLFile(db *sql.DB, filepath string) error {
 	content, err := os.ReadFile(filepath)
 	if err != nil {

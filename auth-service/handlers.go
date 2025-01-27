@@ -22,7 +22,7 @@ type AuthServer struct {
 }
 
 func (s *AuthServer) UserExist(username string) (bool, error) {
-	query := "SELECT 1 FROM users WHERE name = $1 LIMIT 1"
+	query := "SELECT 1 FROM users WHERE username = $1 LIMIT 1"
 
 	data, err := s.storage.GetData(query, username)
 	if err != nil {
@@ -59,6 +59,7 @@ func (s *AuthServer) SendVerLink(emailVerPswd, username, email string) error {
 	var serveLoc = os.Getenv("SERVER_LOC")
 	var useHTTPS = os.Getenv("USE_HTTPS")
 	var domainName = os.Getenv("DOMAIN_NAME")
+
 	if serveLoc == "local" {
 		domName = "http://localhost:8080"
 	} else {
@@ -70,11 +71,12 @@ func (s *AuthServer) SendVerLink(emailVerPswd, username, email string) error {
 	}
 	subject := "Email Verification"
 	HTMLbody := `<html><h1>CLick link to verify email</h1><a href="` + domName + `/verify-email/` + username + `/` + emailVerPswd + `">Click here to verify email</a></html>`
-	err := s.SendEmail(subject, HTMLbody, email)
-	if err != nil {
-		fmt.Println("Can't send verification email")
+
+	if err := s.SendEmail(subject, HTMLbody, email); err != nil {
+		s.logger.Error("Can't send verification email")
 		return err
 	}
+
 	return nil
 }
 
@@ -83,9 +85,9 @@ func (s *AuthServer) SendEmail(subject, HTMLbody, email string) error {
 	host := "smtp.gmail.com"
 	port := "587"
 	address := host + ":" + port
-	var fromEmail = os.Getenv("from_Email_Addr")
-	var smtpPswd = os.Getenv("SMTP_pswd")
-	var entityName = os.Getenv("entity_name")
+	fromEmail := os.Getenv("from_Email_Addr")
+	smtpPswd := os.Getenv("SMTP_pswd")
+	entityName := os.Getenv("entity_name")
 	auth := smtp.PlainAuth("", fromEmail, smtpPswd, host)
 	msg := []byte(
 		"From: " + entityName + ": <" + fromEmail + ">\r\n" +
@@ -95,10 +97,12 @@ func (s *AuthServer) SendEmail(subject, HTMLbody, email string) error {
 			"Content-type: text/html; charset=\"utf8\";\r\n" +
 			"\r\n" +
 			HTMLbody)
-	err := smtp.SendMail(address, auth, fromEmail, to, msg)
-	if err != nil {
+
+	if err := smtp.SendMail(address, auth, fromEmail, to, msg); err != nil {
+		s.logger.Error("smtp.SendMail error")
 		return err
 	}
+
 	return nil
 }
 
@@ -132,11 +136,11 @@ func (s *AuthServer) NewUser(req *proto.RegRequest) error {
 	u.VerHash = string(b)
 
 	// Create user timeout after 24 hours
-	u.Timeout = time.Now().Local().AddDate(0, 0, 1)
+	u.TimeoutAt = time.Now().Local().AddDate(0, 0, 1)
 
 	// Save user
-	query := "INSERT INTO TABLE users (username, pswdHash, email, verHash, timeout, CreatedAt, UpdatedAt) VALUES ($1, $2, $3, $4, $5, $6, $7)"
-	if err = s.storage.ExecuteQuery(query, req.Username, u.PswdHash, req.Email, u.VerHash, u.Timeout, time.Now().Local(), time.Now().Local()); err != nil {
+	query := "INSERT INTO users (username, pswd_hash, email, ver_hash, timeout_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+	if err = s.storage.ExecuteQuery(query, req.Username, u.PswdHash, req.Email, u.VerHash, u.TimeoutAt, time.Now().Local(), time.Now().Local()); err != nil {
 		s.logger.Error("Storage error: %v", err)
 		return err
 	}

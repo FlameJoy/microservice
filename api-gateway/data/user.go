@@ -17,12 +17,12 @@ import (
 type User struct {
 	ID         int       `json:"id"`
 	Username   string    `json:"name" validate:"required,gte=4,lte=24"`
-	Pswd       string    `json:"pswd" validate:"required,gte=8,lte=24"`
-	PswdRepeat string    `json:"pswdRepeat" validate:"required,gte=8,lte=24"`
+	Pswd       string    `json:"pswd" validate:"required,gte=8,lte=24" gorm:"-"`
+	PswdRepeat string    `json:"pswdRepeat" validate:"required,gte=8,lte=24" gorm:"-"`
 	PswdHash   string    `json:"-"`
 	Email      string    `json:"email" validate:"required,email"`
 	VerHash    string    `json:"-"`
-	Timeout    time.Time `json:"-"`
+	TimeoutAt  time.Time `json:"-"`
 	VerifiedAt time.Time `json:"-"`
 	CreatedAt  time.Time `json:"-"`
 	UpdatedAt  time.Time `json:"-"`

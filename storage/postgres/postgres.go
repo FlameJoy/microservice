@@ -3,19 +3,14 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
-	"microsvc/api-gateway/data"
 	"microsvc/common/utils"
 	"os"
 
 	_ "github.com/lib/pq"
-
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 type Storage struct {
-	db *sql.DB
-	// dsn    string
+	db     *sql.DB
 	logger *utils.CustomLogger
 	config Config
 }
@@ -45,71 +40,6 @@ func FormConfig() Config {
 	}
 }
 
-func (ps *Storage) Migrate() {
-	var err error
-
-	ps.logger.Info("Start migration")
-
-	if err = ps.createDBIfNotExist(); err != nil {
-		ps.logger.Fatal("Can't create DB: %v", err)
-	}
-
-	ps.logger.Info("Conn to target DB: %s", ps.config.dbName)
-
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", ps.config.host, ps.config.user, ps.config.pswd, ps.config.dbName, ps.config.port)
-
-	gormDB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		ps.logger.Fatal("Can't conn to DB: %v", err)
-	}
-	sqlDB, _ := gormDB.DB()
-	defer sqlDB.Close()
-
-	ps.logger.Info("Migrate...")
-
-	if err = gormDB.AutoMigrate(&data.User{}); err != nil {
-		ps.logger.Fatal("Migration error: %s", err)
-	}
-
-	ps.logger.Info("Migration succesful")
-}
-
-func (ps *Storage) createDBIfNotExist() error {
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=postgres port=%s sslmode=disable", ps.config.host, ps.config.user, ps.config.pswd, ps.config.port)
-
-	ps.logger.Info("Conn to postgres DB")
-
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		ps.logger.Error("Can't conn to postgres DB: %v", err)
-		return err
-	}
-	defer db.Close()
-
-	ps.logger.Info("Check existing needed DB %s", ps.config.dbName)
-
-	var exists bool
-	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = $1)", ps.config.dbName).Scan(&exists)
-	if err != nil {
-		ps.logger.Error("Can't check existing needed DB: %v", err)
-		return err
-	}
-
-	if !exists {
-		ps.logger.Info("Target DB %s not found, creating...", ps.config.dbName)
-
-		_, err = db.Exec("CREATE DATABASE " + ps.config.dbName)
-		if err != nil {
-			ps.logger.Error("Can't create DB %s: %v", ps.config.dbName, err)
-			return err
-		}
-
-		ps.logger.Info("%s succesfuly created", ps.config.dbName)
-	}
-
-	return nil
-}
-
 func (ps *Storage) ConnToDB() error {
 	var err error
 
@@ -131,13 +61,13 @@ func (ps *Storage) Ping() error {
 	return ps.db.Ping()
 }
 
-// ExecuteQuery - выполнение SQL-запроса (INSERT, UPDATE, DELETE)
+// ExecuteQuery - INSERT, UPDATE, DELETE
 func (ps *Storage) ExecuteQuery(query string, args ...interface{}) error {
 	_, err := ps.db.Exec(query, args...)
 	return err
 }
 
-// GetData - выполнение SELECT-запроса и возврат данных
+// GetData - SELECT
 func (ps *Storage) GetData(query string, args ...interface{}) ([]map[string]interface{}, error) {
 	rows, err := ps.db.Query(query, args...)
 	if err != nil {

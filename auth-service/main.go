@@ -16,7 +16,10 @@ func main() {
 	}
 
 	storage := postgres.NewStorage(logger, postgres.FormConfig())
-	storage.Migrate("../storage/postgres/sql")
+	err := storage.Migrate("../storage/postgres/sql")
+	if err != nil {
+		logger.Fatal("DB error: %v", err)
+	}
 	if err := storage.ConnToDB(); err != nil {
 		logger.Fatal("DB error: %v", err)
 	}

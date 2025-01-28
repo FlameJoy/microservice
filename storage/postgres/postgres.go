@@ -32,11 +32,11 @@ func NewStorage(logger *utils.CustomLogger, config Config) *Storage {
 
 func FormConfig() Config {
 	return Config{
-		dbName: os.Getenv("POSTGRES_NAME"),
-		port:   os.Getenv("POSTGRES_PORT"),
-		host:   os.Getenv("POSGRES_HOST"),
-		user:   os.Getenv("POSTGRES_USER"),
-		pswd:   os.Getenv("POSTGRES_PSWD"),
+		dbName: os.Getenv("PS_NAME"),
+		port:   os.Getenv("PS_PORT"),
+		host:   os.Getenv("PS_HOST"),
+		user:   os.Getenv("PS_USER"),
+		pswd:   os.Getenv("PS_PSWD"),
 	}
 }
 

@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
+	"microsvc/common/utils"
 	"os"
 	"path/filepath"
 )
@@ -39,7 +40,7 @@ func (ps *Storage) Migrate(migrationsDir string) error {
 		ps.logger.Info("Execute %s...", file.Name())
 		// Полный путь к SQL-файлу
 		filePath := filepath.Join(migrationsDir, file.Name())
-		if err := execSQLFile(ps.db, filePath); err != nil {
+		if err := utils.ExecSQLFile(ps.db, filePath); err != nil {
 			return err
 		}
 	}
@@ -73,20 +74,6 @@ func (ps *Storage) createDBIfNotExist() error {
 		}
 
 		ps.logger.Info("%s DB succesfuly created", ps.config.dbName)
-	}
-
-	return nil
-}
-
-func execSQLFile(db *sql.DB, filepath string) error {
-	content, err := os.ReadFile(filepath)
-	if err != nil {
-		return err
-	}
-
-	_, err = db.Exec(string(content))
-	if err != nil {
-		return err
 	}
 
 	return nil

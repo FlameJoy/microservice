@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"microsvc/api-gateway/data"
 	"microsvc/api-gateway/proto"
 	"microsvc/common/utils"
+	"microsvc/data"
 	"net/http"
 
 	validator "github.com/go-playground/validator/v10"
@@ -41,13 +41,13 @@ func (h *handler) UserValidate(next http.HandlerFunc) http.HandlerFunc {
 			utils.HttpRespErrRFC9457("UserValidate", "Validation error", err, http.StatusBadRequest, w, r, h.logger)
 			return
 		}
-
+		fmt.Println("ERROR")
 		// Password validation
 		if err := u.ValidatePswd(); err != nil {
 			utils.HttpRespErrRFC9457("UserValidate", "Validation error", err, http.StatusBadRequest, w, r, h.logger)
 			return
 		}
-
+		fmt.Println("ERROR")
 		ctx := context.WithValue(context.Background(), KeyUser{}, u)
 		req := r.WithContext(ctx)
 		next.ServeHTTP(w, req)
@@ -87,7 +87,34 @@ func (h *handler) ProxyRegReq(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) ProxyAuthReq(w http.ResponseWriter, r *http.Request) {
+	var u data.User
+	if err := u.FromJSON(r.Body); err != nil {
+		utils.HttpRespErrRFC9457("ProxyAuthReq", "FromJSON error", err, http.StatusBadRequest, w, r, h.logger)
+		return
+	}
+	defer r.Body.Close()
 
+	req := proto.GatewayLoginRequest{
+		Username: u.Username,
+		Password: u.Pswd,
+	}
+
+	h.logger.Info("Received login data, redirect to auth-svc")
+
+	resp, err := GatewayServer.Login(r.Context(), &req)
+	if err != nil {
+		utils.HttpRespErrRFC9457("ProxyAuthReq", "GatewayServer.Login error", err, http.StatusInternalServerError, w, r, h.logger)
+		return
+	}
+
+	h.logger.Info("Received auth-svc response, send to client")
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(&resp); err != nil {
+		utils.HttpRespErrRFC9457("ProxyRegReq", "Encode error", err, http.StatusInternalServerError, w, r, h.logger)
+		return
+	}
 }
 
 type KeyOrder struct{}

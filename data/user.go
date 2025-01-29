@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"microsvc/common/utils"
 	"os"
 	"strconv"
 	"time"
@@ -16,9 +17,9 @@ import (
 
 type User struct {
 	ID         int       `json:"id"`
-	Username   string    `json:"name" validate:"required,gte=4,lte=24"`
-	Pswd       string    `json:"pswd" validate:"required,gte=8,lte=24" gorm:"-"`
-	PswdRepeat string    `json:"pswdRepeat" validate:"required,gte=8,lte=24" gorm:"-"`
+	Username   string    `json:"username" validate:"required,gte=4,lte=24"`
+	Pswd       string    `json:"password" validate:"required,gte=8,lte=24"`
+	PswdRepeat string    `json:"password_repeat" validate:"required,gte=8,lte=24"`
 	PswdHash   string    `json:"-"`
 	Email      string    `json:"email" validate:"required,email"`
 	VerHash    string    `json:"-"`
@@ -30,10 +31,19 @@ type User struct {
 }
 
 var (
-	minEntropyBits, _ = strconv.Atoi(os.Getenv("minEntropyBits"))
+	minEntropyBits, _ = strconv.Atoi(os.Getenv("MIN_ENTROPY_BITS"))
 	verifier          = emailverifier.NewVerifier()
 	serveLoc          = os.Getenv("server_location")
 )
+
+func init() {
+	verifier = verifier.EnableDomainSuggest()
+	if serveLoc == "remote" {
+		verifier.EnableSMTPCheck()
+	}
+	dispEmailsDomains := utils.DispEmailDomains()
+	verifier = verifier.AddDisposableDomains(dispEmailsDomains)
+}
 
 func (u *User) ToJSON(w io.Writer) error {
 	e := json.NewEncoder(w)
@@ -48,13 +58,13 @@ func (u *User) FromJSON(r io.Reader) error {
 func (u *User) ValidateUsername() error {
 	for _, char := range u.Username {
 		if !unicode.IsLetter(char) && !unicode.IsDigit(char) {
-			return fmt.Errorf("username must contain only letters and numbers")
+			return errors.New("username must contain only letters and numbers")
 		}
 	}
 	if len(u.Username) > 4 && len(u.Username) < 25 {
 		return nil
 	}
-	return fmt.Errorf("username must be greater than 4 and less than 25 characters")
+	return errors.New("username must be greater than 4 and less than 25 characters")
 }
 
 func (u *User) ValidateEmail() error {
@@ -82,21 +92,26 @@ func (u *User) ValidateEmail() error {
 }
 
 func (u *User) ValidatePswd() error {
-	// Check length
-	if len(u.Pswd) >= 8 && len(u.PswdRepeat) <= 24 {
-		return nil
+	if len(u.Pswd) < 8 && len(u.Pswd) > 24 {
+		return errors.New("password must be greater than 7 and less than 25 characters")
 	}
 
-	// Compare pswds
+	if len(u.Pswd) != len(u.PswdRepeat) {
+		return errors.New("different passwords")
+	}
+
 	for i := 0; i < len(u.Pswd); i++ {
 		if u.Pswd[i] != u.PswdRepeat[i] {
 			return errors.New("passwords aren't comparable")
 		}
 	}
-	// Validation
-	err := passwordvalidator.Validate(u.Pswd, float64(minEntropyBits))
-	if err != nil {
+
+	if err := passwordvalidator.Validate(u.Pswd, float64(minEntropyBits)); err != nil {
 		return err
+	}
+
+	if len(u.Pswd) >= 8 && len(u.PswdRepeat) <= 24 {
+		return nil
 	}
 
 	return errors.New("password must be greater than 7 and less than 25 characters")

@@ -2,16 +2,19 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
-	"microsvc/api-gateway/data"
 	"microsvc/auth-service/proto"
 	"microsvc/common/utils"
+	"microsvc/data"
 	"microsvc/storage"
 	"net/smtp"
 	"os"
+	"strconv"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -54,7 +57,6 @@ func (s *AuthServer) EmailExist(email string) (bool, error) {
 }
 
 func (s *AuthServer) SendVerLink(emailVerPswd, username, email string) error {
-	// Send email
 	var domName string
 	var serveLoc = os.Getenv("SERVER_LOC")
 	var useHTTPS = os.Getenv("USE_HTTPS")
@@ -139,23 +141,22 @@ func (s *AuthServer) NewUser(req *proto.RegRequest) error {
 	u.TimeoutAt = time.Now().Local().AddDate(0, 0, 1)
 
 	// Save user
-	query := "INSERT INTO users (username, pswd_hash, email, ver_hash, timeout_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)"
-	if err = s.storage.ExecuteQuery(query, req.Username, u.PswdHash, req.Email, u.VerHash, u.TimeoutAt, time.Now().Local(), time.Now().Local()); err != nil {
+	query := "INSERT INTO users (username, email, pswd_hash, ver_hash, timeout_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+	if err = s.storage.ExecuteQuery(query, req.Username, req.Email, u.PswdHash, u.VerHash, u.TimeoutAt, time.Now().Local(), time.Now().Local()); err != nil {
 		s.logger.Error("Storage error: %v", err)
 		return err
 	}
 
 	// Send ver email
-	if err = s.SendVerLink(emailVerPswd, req.Username, req.Email); err != nil {
-		s.logger.Error("Error: %v", err)
-		return err
-	}
+	// if err = s.SendVerLink(emailVerPswd, req.Username, req.Email); err != nil {
+	// 	s.logger.Error("Error: %v", err)
+	// 	return err
+	// }
 
 	return nil
 }
 
 func (s *AuthServer) Register(ctx context.Context, req *proto.RegRequest) (*proto.RegResponse, error) {
-
 	s.logger.Info("auth svc: starts gRPC server Register func")
 
 	// Check if user already exist
@@ -164,7 +165,7 @@ func (s *AuthServer) Register(ctx context.Context, req *proto.RegRequest) (*prot
 		return &proto.RegResponse{Message: "UserExist error"}, err
 	}
 	if exists {
-		return &proto.RegResponse{Message: "User already exist"}, nil
+		return &proto.RegResponse{Message: "User already exist"}, errors.New("user already exist")
 	}
 
 	// Check if email already exist
@@ -173,7 +174,7 @@ func (s *AuthServer) Register(ctx context.Context, req *proto.RegRequest) (*prot
 		return &proto.RegResponse{Message: "EmailExist error"}, err
 	}
 	if exists {
-		return &proto.RegResponse{Message: "Email already using"}, nil
+		return &proto.RegResponse{Message: "Email already using"}, errors.New("email already using")
 	}
 
 	// Create new user
@@ -185,9 +186,59 @@ func (s *AuthServer) Register(ctx context.Context, req *proto.RegRequest) (*prot
 	return &proto.RegResponse{Message: "User registered successfully"}, nil
 }
 
-func (s *AuthServer) Login(ctx context.Context, req *proto.LoginRequest) (*proto.LoginResponse, error) {
-	if req.Username == "Ilya" && req.Password == "qwerty123" {
-		return &proto.LoginResponse{Token: "some_token"}, nil
+func (s *AuthServer) NewToken(userID int) (string, error) {
+	token := jwt.New(jwt.SigningMethodHS256)
+	claims := token.Claims.(jwt.MapClaims)
+
+	expTime, err := strconv.Atoi(os.Getenv("TOKEN_EXP_TIME"))
+	if err != nil {
+		return "", err
 	}
-	return nil, fmt.Errorf("invalid credentials")
+
+	claims["exp"] = time.Now().Local().Add(time.Hour * time.Duration(expTime)).Unix()
+	claims["user_id"] = strconv.Itoa(userID)
+
+	secretKey := os.Getenv("SECRET")
+	tokenStr, err := token.SignedString([]byte(secretKey))
+	if err != nil {
+		return "", err
+	}
+
+	return tokenStr, nil
+}
+
+func (s *AuthServer) Login(ctx context.Context, req *proto.LoginRequest) (*proto.LoginResponse, error) {
+	s.logger.Info("auth svc: starts gRPC server Login func")
+
+	query := "SELECT id, username, pswd_hash FROM users WHERE username = $1 AND deleted_at IS NULL LIMIT 1"
+	data, err := s.storage.GetData(query, req.Username)
+	if err != nil {
+		return &proto.LoginResponse{Message: "storage.GetData error"}, err
+	}
+
+	if len(data) == 0 {
+		return nil, fmt.Errorf("invalid credentials")
+	}
+
+	pswdHash, ok := data[0]["pswd_hash"]
+	if !ok {
+		return &proto.LoginResponse{Message: "storage: missing user pswdHash data"}, errors.New("storage: missing user pswdHash data")
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(pswdHash.(string)), []byte(req.Password))
+	if err != nil {
+		return &proto.LoginResponse{Message: "bcrypt.CompareHashAndPassword error"}, err
+	}
+
+	userID, ok := data[0]["id"]
+	if !ok {
+		return &proto.LoginResponse{Message: "storage: missing user id data"}, errors.New("storage: missing user id data")
+	}
+
+	token, err := s.NewToken(userID.(int))
+	if err != nil {
+		return &proto.LoginResponse{Message: "NewToken error"}, err
+	}
+
+	return &proto.LoginResponse{Message: "Access granted", Token: token}, nil
 }

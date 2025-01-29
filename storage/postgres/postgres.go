@@ -32,7 +32,7 @@ func NewStorage(logger *utils.CustomLogger, config Config) *Storage {
 
 func FormConfig() Config {
 	return Config{
-		dbName: os.Getenv("PS_NAME"),
+		dbName: os.Getenv("PS_DBNAME"),
 		port:   os.Getenv("PS_PORT"),
 		host:   os.Getenv("PS_HOST"),
 		user:   os.Getenv("PS_USER"),

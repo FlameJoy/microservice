@@ -36,10 +36,12 @@ func NewGRPCServer(authSvcAddr string, orderSvcAddr string, logger *utils.Custom
 	if err != nil {
 		return nil, err
 	}
-
 	authClient := pbAuth.NewAuthServiceClient(authConn)
 
 	orderConn, err := grpc.NewClient(orderSvcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, err
+	}
 	orderClient := pbOrder.NewOrderServiceClient(orderConn)
 
 	return &grpcServer{
@@ -63,21 +65,20 @@ func (s *grpcServer) Login(ctx context.Context, req *pbGateway.GatewayLoginReque
 	}
 
 	return &pbGateway.GatewayLoginResponse{
-		Token: authResp.Token,
+		Token:   authResp.Token,
+		Message: authResp.Message,
 	}, nil
 }
 
 // Реализация метода Register через Auth-сервис
 func (s *grpcServer) Register(ctx context.Context, req *pbGateway.GatewayRegisterRequest) (*pbGateway.GatewayRegisterResponse, error) {
-	authReq := &pbAuth.RegRequest{
+	regReq := &pbAuth.RegRequest{
 		Username: req.Username,
 		Password: req.Password,
 		Email:    req.Email,
 	}
 
-	s.logger.Info("api gateway: starts gRPC server Register func")
-
-	authResp, err := s.authClient.Register(ctx, authReq)
+	authResp, err := s.authClient.Register(ctx, regReq)
 	if err != nil {
 		return nil, err
 	}

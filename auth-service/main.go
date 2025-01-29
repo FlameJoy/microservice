@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 	"microsvc/common/utils"
-	"microsvc/storage/clickhouse"
+	"microsvc/storage/postgres"
 
 	"os"
 )
@@ -15,11 +15,11 @@ func main() {
 		logger.Fatal("LoadEnv error: %s", err)
 	}
 
-	// storage := postgres.NewStorage(logger, postgres.FormConfig())
-	// sqlDir := "../storage/postgres/sql"
+	storage := postgres.NewStorage(logger, postgres.FormConfig())
+	sqlDir := "../storage/postgres/sql"
 
-	storage := clickhouse.NewStorage(logger, clickhouse.FormConfig())
-	sqlDir := "../storage/clickhouse/sql"
+	// storage := clickhouse.NewStorage(logger, clickhouse.FormConfig())
+	// sqlDir := "../storage/clickhouse/sql"
 
 	if err := storage.Migrate(sqlDir); err != nil {
 		logger.Fatal("DB error: %v", err)

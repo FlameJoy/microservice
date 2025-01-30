@@ -186,17 +186,17 @@ func (s *AuthServer) Register(ctx context.Context, req *proto.RegRequest) (*prot
 	return &proto.RegResponse{Message: "User registered successfully"}, nil
 }
 
-func (s *AuthServer) NewToken(userID int) (string, error) {
+func (s *AuthServer) NewToken(userID int64) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 
-	expTime, err := strconv.Atoi(os.Getenv("TOKEN_EXP_TIME"))
+	expTimeHours, err := strconv.Atoi(os.Getenv("TOKEN_EXP_TIME"))
 	if err != nil {
 		return "", err
 	}
 
-	claims["exp"] = time.Now().Local().Add(time.Hour * time.Duration(expTime)).Unix()
-	claims["user_id"] = strconv.Itoa(userID)
+	claims["exp"] = time.Now().Local().Add(time.Hour * time.Duration(expTimeHours)).Unix()
+	claims["user_id"] = strconv.FormatInt(userID, 10)
 
 	secretKey := os.Getenv("SECRET")
 	tokenStr, err := token.SignedString([]byte(secretKey))
@@ -235,7 +235,12 @@ func (s *AuthServer) Login(ctx context.Context, req *proto.LoginRequest) (*proto
 		return &proto.LoginResponse{Message: "storage: missing user id data"}, errors.New("storage: missing user id data")
 	}
 
-	token, err := s.NewToken(userID.(int))
+	id, ok := userID.(int64)
+	if !ok {
+		return &proto.LoginResponse{Message: "userID interface conversion error"}, errors.New("interface {} is not int64")
+	}
+
+	token, err := s.NewToken(id)
 	if err != nil {
 		return &proto.LoginResponse{Message: "NewToken error"}, err
 	}

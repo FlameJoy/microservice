@@ -107,6 +107,20 @@ func (h *handler) ProxyAuthReq(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if resp.Token == "" {
+		utils.HttpRespErrRFC9457("ProxyAuthReq", "Missing token in response", nil, http.StatusUnauthorized, w, r, h.logger)
+		return
+	}
+
+	// http.SetCookie(w, &http.Cookie{
+	// 	Name:     "token",
+	// 	Value:    resp.Token,
+	// 	Path:     "/",
+	// 	HttpOnly: true,  // XSS-protection
+	// 	Secure:   false, // true, for HTTPS
+	// 	MaxAge:   3600,
+	// })
+
 	h.logger.Info("Received auth-svc response, send to client")
 
 	w.Header().Set("Content-Type", "application/json")

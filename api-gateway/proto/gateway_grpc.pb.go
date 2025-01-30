@@ -19,17 +19,26 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	GatewayService_Login_FullMethodName       = "/gateway.GatewayService/Login"
-	GatewayService_Register_FullMethodName    = "/gateway.GatewayService/Register"
-	GatewayService_CreateOrder_FullMethodName = "/gateway.GatewayService/CreateOrder"
+	GatewayService_Login_FullMethodName         = "/gateway.GatewayService/Login"
+	GatewayService_Register_FullMethodName      = "/gateway.GatewayService/Register"
+	GatewayService_CreateProduct_FullMethodName = "/gateway.GatewayService/CreateProduct"
+	GatewayService_UpdateProduct_FullMethodName = "/gateway.GatewayService/UpdateProduct"
+	GatewayService_DeleteProduct_FullMethodName = "/gateway.GatewayService/DeleteProduct"
+	GatewayService_CreateOrder_FullMethodName   = "/gateway.GatewayService/CreateOrder"
 )
 
 // GatewayServiceClient is the client API for GatewayService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GatewayServiceClient interface {
-	Login(ctx context.Context, in *GatewayLoginRequest, opts ...grpc.CallOption) (*GatewayLoginResponse, error)
-	Register(ctx context.Context, in *GatewayRegisterRequest, opts ...grpc.CallOption) (*GatewayRegisterResponse, error)
+	// Auth-service
+	Login(ctx context.Context, in *GatewayLoginReq, opts ...grpc.CallOption) (*GatewayLoginResp, error)
+	Register(ctx context.Context, in *GatewayRegisterReq, opts ...grpc.CallOption) (*GatewayRegisterResp, error)
+	// Product-service
+	CreateProduct(ctx context.Context, in *GatewayCreateProductReq, opts ...grpc.CallOption) (*GatewayCreateProductResp, error)
+	UpdateProduct(ctx context.Context, in *GatewayUpdateProductReq, opts ...grpc.CallOption) (*GatewayUpdateProductResp, error)
+	DeleteProduct(ctx context.Context, in *GatewayDeleteProductReq, opts ...grpc.CallOption) (*GatewayDeleteProductResp, error)
+	// Order-service
 	CreateOrder(ctx context.Context, in *GatewayOrderCreateReq, opts ...grpc.CallOption) (*GatewayOrderCreateResp, error)
 }
 
@@ -41,9 +50,9 @@ func NewGatewayServiceClient(cc grpc.ClientConnInterface) GatewayServiceClient {
 	return &gatewayServiceClient{cc}
 }
 
-func (c *gatewayServiceClient) Login(ctx context.Context, in *GatewayLoginRequest, opts ...grpc.CallOption) (*GatewayLoginResponse, error) {
+func (c *gatewayServiceClient) Login(ctx context.Context, in *GatewayLoginReq, opts ...grpc.CallOption) (*GatewayLoginResp, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GatewayLoginResponse)
+	out := new(GatewayLoginResp)
 	err := c.cc.Invoke(ctx, GatewayService_Login_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -51,10 +60,40 @@ func (c *gatewayServiceClient) Login(ctx context.Context, in *GatewayLoginReques
 	return out, nil
 }
 
-func (c *gatewayServiceClient) Register(ctx context.Context, in *GatewayRegisterRequest, opts ...grpc.CallOption) (*GatewayRegisterResponse, error) {
+func (c *gatewayServiceClient) Register(ctx context.Context, in *GatewayRegisterReq, opts ...grpc.CallOption) (*GatewayRegisterResp, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GatewayRegisterResponse)
+	out := new(GatewayRegisterResp)
 	err := c.cc.Invoke(ctx, GatewayService_Register_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gatewayServiceClient) CreateProduct(ctx context.Context, in *GatewayCreateProductReq, opts ...grpc.CallOption) (*GatewayCreateProductResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GatewayCreateProductResp)
+	err := c.cc.Invoke(ctx, GatewayService_CreateProduct_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gatewayServiceClient) UpdateProduct(ctx context.Context, in *GatewayUpdateProductReq, opts ...grpc.CallOption) (*GatewayUpdateProductResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GatewayUpdateProductResp)
+	err := c.cc.Invoke(ctx, GatewayService_UpdateProduct_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *gatewayServiceClient) DeleteProduct(ctx context.Context, in *GatewayDeleteProductReq, opts ...grpc.CallOption) (*GatewayDeleteProductResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GatewayDeleteProductResp)
+	err := c.cc.Invoke(ctx, GatewayService_DeleteProduct_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +114,14 @@ func (c *gatewayServiceClient) CreateOrder(ctx context.Context, in *GatewayOrder
 // All implementations must embed UnimplementedGatewayServiceServer
 // for forward compatibility.
 type GatewayServiceServer interface {
-	Login(context.Context, *GatewayLoginRequest) (*GatewayLoginResponse, error)
-	Register(context.Context, *GatewayRegisterRequest) (*GatewayRegisterResponse, error)
+	// Auth-service
+	Login(context.Context, *GatewayLoginReq) (*GatewayLoginResp, error)
+	Register(context.Context, *GatewayRegisterReq) (*GatewayRegisterResp, error)
+	// Product-service
+	CreateProduct(context.Context, *GatewayCreateProductReq) (*GatewayCreateProductResp, error)
+	UpdateProduct(context.Context, *GatewayUpdateProductReq) (*GatewayUpdateProductResp, error)
+	DeleteProduct(context.Context, *GatewayDeleteProductReq) (*GatewayDeleteProductResp, error)
+	// Order-service
 	CreateOrder(context.Context, *GatewayOrderCreateReq) (*GatewayOrderCreateResp, error)
 	mustEmbedUnimplementedGatewayServiceServer()
 }
@@ -88,11 +133,20 @@ type GatewayServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedGatewayServiceServer struct{}
 
-func (UnimplementedGatewayServiceServer) Login(context.Context, *GatewayLoginRequest) (*GatewayLoginResponse, error) {
+func (UnimplementedGatewayServiceServer) Login(context.Context, *GatewayLoginReq) (*GatewayLoginResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Login not implemented")
 }
-func (UnimplementedGatewayServiceServer) Register(context.Context, *GatewayRegisterRequest) (*GatewayRegisterResponse, error) {
+func (UnimplementedGatewayServiceServer) Register(context.Context, *GatewayRegisterReq) (*GatewayRegisterResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
+}
+func (UnimplementedGatewayServiceServer) CreateProduct(context.Context, *GatewayCreateProductReq) (*GatewayCreateProductResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateProduct not implemented")
+}
+func (UnimplementedGatewayServiceServer) UpdateProduct(context.Context, *GatewayUpdateProductReq) (*GatewayUpdateProductResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateProduct not implemented")
+}
+func (UnimplementedGatewayServiceServer) DeleteProduct(context.Context, *GatewayDeleteProductReq) (*GatewayDeleteProductResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteProduct not implemented")
 }
 func (UnimplementedGatewayServiceServer) CreateOrder(context.Context, *GatewayOrderCreateReq) (*GatewayOrderCreateResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateOrder not implemented")
@@ -119,7 +173,7 @@ func RegisterGatewayServiceServer(s grpc.ServiceRegistrar, srv GatewayServiceSer
 }
 
 func _GatewayService_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GatewayLoginRequest)
+	in := new(GatewayLoginReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -131,13 +185,13 @@ func _GatewayService_Login_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: GatewayService_Login_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GatewayServiceServer).Login(ctx, req.(*GatewayLoginRequest))
+		return srv.(GatewayServiceServer).Login(ctx, req.(*GatewayLoginReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _GatewayService_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GatewayRegisterRequest)
+	in := new(GatewayRegisterReq)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -149,7 +203,61 @@ func _GatewayService_Register_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: GatewayService_Register_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GatewayServiceServer).Register(ctx, req.(*GatewayRegisterRequest))
+		return srv.(GatewayServiceServer).Register(ctx, req.(*GatewayRegisterReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GatewayService_CreateProduct_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GatewayCreateProductReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayServiceServer).CreateProduct(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GatewayService_CreateProduct_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayServiceServer).CreateProduct(ctx, req.(*GatewayCreateProductReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GatewayService_UpdateProduct_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GatewayUpdateProductReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayServiceServer).UpdateProduct(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GatewayService_UpdateProduct_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayServiceServer).UpdateProduct(ctx, req.(*GatewayUpdateProductReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GatewayService_DeleteProduct_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GatewayDeleteProductReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GatewayServiceServer).DeleteProduct(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GatewayService_DeleteProduct_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GatewayServiceServer).DeleteProduct(ctx, req.(*GatewayDeleteProductReq))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -186,6 +294,18 @@ var GatewayService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Register",
 			Handler:    _GatewayService_Register_Handler,
+		},
+		{
+			MethodName: "CreateProduct",
+			Handler:    _GatewayService_CreateProduct_Handler,
+		},
+		{
+			MethodName: "UpdateProduct",
+			Handler:    _GatewayService_UpdateProduct_Handler,
+		},
+		{
+			MethodName: "DeleteProduct",
+			Handler:    _GatewayService_DeleteProduct_Handler,
 		},
 		{
 			MethodName: "CreateOrder",

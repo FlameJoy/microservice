@@ -96,6 +96,10 @@ func registerHandlers(h *handler, mux *http.ServeMux) {
 	// profile.GET("", h.ProxyProfile)
 	// profile.GET("/user/id")
 
+	product := api.Group("/product")
+	product.Use(middleware.AuthMW(h.logger))
+	product.POST("/new", h.ProxyCreateProduct)
+
 	// Order
 	// order := api.Group("/order")
 	// order.POST("/create", h.OrderValidate(h.ProxyOrderCreate))

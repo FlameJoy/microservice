@@ -5,32 +5,79 @@ package gateway;
 option go_package = "./proto";
 
 service GatewayService {
-  rpc Login (GatewayLoginRequest) returns (GatewayLoginResponse);
-  rpc Register (GatewayRegisterRequest) returns (GatewayRegisterResponse);
+  // Auth-service
+  rpc Login (GatewayLoginReq) returns (GatewayLoginResp);
+  rpc Register (GatewayRegisterReq) returns (GatewayRegisterResp);
+  // Product-service
+  rpc CreateProduct(GatewayCreateProductReq) returns (GatewayCreateProductResp);
+  rpc UpdateProduct(GatewayUpdateProductReq) returns (GatewayUpdateProductResp);
+  rpc DeleteProduct(GatewayDeleteProductReq) returns (GatewayDeleteProductResp);
+
+  // Order-service
   rpc CreateOrder (GatewayOrderCreateReq) returns (GatewayOrderCreateResp);
 }
 
-message GatewayLoginRequest {
+// Auth-service
+message GatewayLoginReq {
   string username = 1;
   string password = 2;
 }
 
-message GatewayLoginResponse {
+message GatewayLoginResp {
   string token = 1;
   string message = 2;
 }
 
-message GatewayRegisterRequest {
+message GatewayRegisterReq {
   string username = 1;
   string password = 2;
   string email = 3;
 }
 
-message GatewayRegisterResponse {
+message GatewayRegisterResp {
   string message = 1;
 }
 
-// Orders 
+// Product-service
+message GatewayCreateProductReq {
+  int64 SKU = 1;
+  string Name = 2;
+  int64 Price = 3;
+  string Category = 4;
+  string UOM = 5;
+  string Brand = 6;
+  int64 Stock = 7; 
+}
+
+message GatewayCreateProductResp {
+  int64 id = 1;
+  string message = 2;
+}
+
+message GatewayUpdateProductReq {
+  int64 SKU = 1;
+  string Name = 2;
+  int64 Price = 3;
+  string Category = 4;
+  string UOM = 5;
+  string Brand = 6;
+  int64 Stock = 7; 
+}
+
+message GatewayUpdateProductResp {
+  int64 id = 1;
+  string message = 2;
+}
+
+message GatewayDeleteProductReq {
+  int64 id = 1;
+}
+
+message GatewayDeleteProductResp {
+  string message = 1;
+}
+
+// Order-service
 
 message GatewayOrderCreateReq {
   int32 itemID = 1;

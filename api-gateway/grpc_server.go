@@ -52,7 +52,7 @@ func NewGRPCServer(authSvcAddr string, orderSvcAddr string, logger *utils.Custom
 }
 
 // Реализация метода Login через Auth-сервис
-func (s *grpcServer) Login(ctx context.Context, req *pbGateway.GatewayLoginRequest) (*pbGateway.GatewayLoginResponse, error) {
+func (s *grpcServer) Login(ctx context.Context, req *pbGateway.GatewayLoginReq) (*pbGateway.GatewayLoginResp, error) {
 	// Проксируем запрос в Auth-сервис
 	authReq := &pbAuth.LoginRequest{
 		Username: req.Username,
@@ -64,14 +64,14 @@ func (s *grpcServer) Login(ctx context.Context, req *pbGateway.GatewayLoginReque
 		return nil, err
 	}
 
-	return &pbGateway.GatewayLoginResponse{
+	return &pbGateway.GatewayLoginResp{
 		Token:   authResp.Token,
 		Message: authResp.Message,
 	}, nil
 }
 
 // Реализация метода Register через Auth-сервис
-func (s *grpcServer) Register(ctx context.Context, req *pbGateway.GatewayRegisterRequest) (*pbGateway.GatewayRegisterResponse, error) {
+func (s *grpcServer) Register(ctx context.Context, req *pbGateway.GatewayRegisterReq) (*pbGateway.GatewayRegisterResp, error) {
 	regReq := &pbAuth.RegRequest{
 		Username: req.Username,
 		Password: req.Password,
@@ -83,7 +83,7 @@ func (s *grpcServer) Register(ctx context.Context, req *pbGateway.GatewayRegiste
 		return nil, err
 	}
 
-	return &pbGateway.GatewayRegisterResponse{
+	return &pbGateway.GatewayRegisterResp{
 		Message: authResp.Message,
 	}, nil
 }

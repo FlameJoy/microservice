@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package product;
+
+option go_package = "./proto";
+
+service ProductService {
+    rpc Create (CreateReq) returns (CreateResp);
+    rpc Update (UpdateReq) returns (UpdateResp);
+    rpc Delete (DeleteReq) returns (DeleteResp);
+    // rpc GetProductByID(GetProductByIDReq) returns (GetProductByIDResp)
+}
+
+message CreateReq {
+    int64 SKU = 1;
+    string Name = 2;
+    int64 Price = 3;
+    string Category = 4;
+    string UOM = 5;
+    string Brand = 6;
+    int64 Stock = 7; 
+}
+
+message CreateResp {
+    int64 id = 1;
+    string message = 2;
+}
+
+message UpdateReq {
+    int64 SKU = 1;
+    string Name = 2;
+    int64 Price = 3;
+    string Category = 4;
+    string UOM = 5;
+    string Brand = 6;
+    int64 Stock = 7;  
+}
+
+message UpdateResp {
+    int64 id = 1;
+    string message = 2;
+}
+
+message DeleteReq {
+    int64 id = 1;
+}
+
+message DeleteResp {
+    string message = 1;
+}
+
+
+

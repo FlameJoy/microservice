@@ -43,7 +43,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		StartGRPCServer(":50051", ":50052", ":50053", done, logger)
+		StartGRPCServer(":50051", ":50052", ":50053", ":50054", done, logger)
 	}()
 
 	<-done

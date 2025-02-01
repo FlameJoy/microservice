@@ -20,7 +20,7 @@ func (s *ProductServer) Create(ctx context.Context, req *proto.CreateReq) (*prot
 	query := "INSERT INTO products (sku, name, price, category, uom, brand, stock, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id"
 
 	id, err := s.storage.ExecuteQuery(query,
-		req.SKU, req.Name, req.Price, req.Category, req.UOM, req.Brand, req.Stock, time.Now().Local(), time.Now().Local(),
+		req.SKU, req.Name, req.Price, req.Category, req.UOM, req.Brand, req.Stock, time.Now().Local().Format(time.RFC3339), time.Now().Local().Format(time.RFC3339),
 	)
 	if err != nil {
 		return nil, err

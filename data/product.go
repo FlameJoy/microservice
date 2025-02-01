@@ -34,9 +34,9 @@ func (p *Product) ToJSON(w io.Writer) error {
 
 func (p *Product) Validate() error {
 
-	if len(p.SKU) != 10 {
-		return errors.New("SKU must consist 10 digits")
-	}
+	// if len(p.SKU) != 10 {
+	// 	return errors.New("SKU must consist 10 digits")
+	// }
 
 	if p.Price <= 0 {
 		return errors.New("incorrect price")

@@ -98,7 +98,8 @@ func registerHandlers(h *handler, mux *http.ServeMux) {
 
 	product := api.Group("/product")
 	product.Use(middleware.AuthMW(h.logger))
-	product.POST("/new", h.ProxyCreateProduct)
+	product.POST("/new", h.ProductValidate(h.ProxyCreateProduct))
+	product.PUT("/update", h.ProxyUpdateProduct)
 
 	// Order
 	// order := api.Group("/order")

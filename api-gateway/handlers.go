@@ -158,7 +158,7 @@ func (h *handler) ProxyCreateProduct(w http.ResponseWriter, r *http.Request) {
 	value := r.Context().Value(KeyProduct{})
 	p, ok := value.(data.Product)
 	if !ok {
-		utils.HttpRespErrRFC9457("ProxyCreateProduct", "Interface conversion error", fmt.Errorf("%v is not string", value), http.StatusInternalServerError, w, r, h.logger)
+		utils.HttpRespErrRFC9457("ProxyCreateProduct", "Interface conversion error", fmt.Errorf("%v is not data.Product", value), http.StatusInternalServerError, w, r, h.logger)
 		return
 	}
 
@@ -172,7 +172,7 @@ func (h *handler) ProxyCreateProduct(w http.ResponseWriter, r *http.Request) {
 		Stock:    int64(p.Stock),
 	}
 
-	resp, err := GatewayServer.CreateProduct(context.Background(), &req)
+	resp, err := GatewayServer.CreateProduct(r.Context(), &req)
 	if err != nil {
 		utils.HttpRespErrRFC9457("ProxyCreateProduct", "GatewayServer.CreateProduct error", err, http.StatusInternalServerError, w, r, h.logger)
 		return
@@ -270,7 +270,7 @@ func (h *handler) ProxyUpdateProduct(w http.ResponseWriter, r *http.Request) {
 
 	// Добавляем updated_at
 	setClauses = append(setClauses, fmt.Sprintf("updated_at=$%d", argIdx))
-	args = append(args, time.Now())
+	args = append(args, time.Now().Local().Format(time.RFC3339))
 	argIdx++
 
 	// Если нет обновляемых полей
@@ -290,12 +290,12 @@ func (h *handler) ProxyUpdateProduct(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := GatewayServer.UpdateProduct(context.Background(), &req)
 	if err != nil {
-		utils.HttpRespErrRFC9457("ProxyCreateProduct", "GatewayServer.CreateProduct error", err, http.StatusInternalServerError, w, r, h.logger)
+		utils.HttpRespErrRFC9457("ProxyUpdateProduct", "GatewayServer.CreateProduct error", err, http.StatusInternalServerError, w, r, h.logger)
 		return
 	}
 
 	if !resp.Success {
-		utils.HttpRespErrRFC9457("ProxyCreateProduct", "GatewayServer.CreateProduct error", errors.New(resp.Message), http.StatusInternalServerError, w, r, h.logger)
+		utils.HttpRespErrRFC9457("ProxyUpdateProduct", "GatewayServer.CreateProduct error", errors.New(resp.Message), http.StatusInternalServerError, w, r, h.logger)
 		return
 	}
 

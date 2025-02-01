@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 
@@ -17,7 +18,6 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -32,13 +32,19 @@ type grpcServer struct {
 	logger        *utils.CustomLogger
 }
 
-func NewGRPCServer(authSvcAddr string, orderSvcAddr string, logger *utils.CustomLogger) (*grpcServer, error) {
+func NewGRPCServer(authSvcAddr, orderSvcAddr, productSvcAddr string, logger *utils.CustomLogger) (*grpcServer, error) {
 	// Используем NewClient для подключения к Auth-сервису
 	authConn, err := grpc.NewClient(authSvcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
 	authClient := pbAuth.NewAuthServiceClient(authConn)
+
+	productConn, err := grpc.NewClient(productSvcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, err
+	}
+	productClient := pbProduct.NewProductServiceClient(productConn)
 
 	orderConn, err := grpc.NewClient(orderSvcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -47,9 +53,10 @@ func NewGRPCServer(authSvcAddr string, orderSvcAddr string, logger *utils.Custom
 	orderClient := pbOrder.NewOrderServiceClient(orderConn)
 
 	return &grpcServer{
-		authClient:  authClient,
-		orderClient: orderClient,
-		logger:      logger,
+		authClient:    authClient,
+		productClient: productClient,
+		orderClient:   orderClient,
+		logger:        logger,
 	}, nil
 }
 
@@ -91,18 +98,15 @@ func (s *grpcServer) Register(ctx context.Context, req *pbGateway.GatewayRegiste
 }
 
 func (s *grpcServer) CreateProduct(ctx context.Context, req *pbGateway.GatewayCreateProductReq) (*pbGateway.GatewayCreateProductResp, error) {
-	// createReq := &pbProduct.CreateReq{
-	// 	SKU:      req.SKU,
-	// 	Name:     req.Name,
-	// 	Price:    req.Price,
-	// 	Category: req.Category,
-	// 	UOM:      req.UOM,
-	// 	Brand:    req.Brand,
-	// 	Stock:    req.Stock,
-	// }
-
-	createReq := &pbProduct.CreateReq{}
-	proto.Merge(createReq, req)
+	createReq := &pbProduct.CreateReq{
+		SKU:      req.SKU,
+		Name:     req.Name,
+		Price:    req.Price,
+		Category: req.Category,
+		UOM:      req.UOM,
+		Brand:    req.Brand,
+		Stock:    req.Stock,
+	}
 
 	s.logger.Info("api gateway: starts gRPC server CreateProduct func")
 
@@ -110,6 +114,8 @@ func (s *grpcServer) CreateProduct(ctx context.Context, req *pbGateway.GatewayCr
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("ERROR")
 
 	return &pbGateway.GatewayCreateProductResp{
 		Id:      resp.Id,
@@ -157,10 +163,10 @@ func (s *grpcServer) CreateOrder(ctx context.Context, req *pbGateway.GatewayOrde
 	}, nil
 }
 
-func StartGRPCServer(address, authSvcAddr string, orderSvcAddr string, done chan os.Signal, logger *utils.CustomLogger) {
+func StartGRPCServer(address, authSvcAddr string, orderSvcAddr string, productSvcAddr string, done chan os.Signal, logger *utils.CustomLogger) {
 	// Создаём Gateway gRPC-сервер
 	var err error
-	GatewayServer, err = NewGRPCServer(authSvcAddr, orderSvcAddr, logger)
+	GatewayServer, err = NewGRPCServer(authSvcAddr, orderSvcAddr, productSvcAddr, logger)
 	if err != nil {
 		log.Fatalf("Failed to create gRPC server: %v", err)
 	}

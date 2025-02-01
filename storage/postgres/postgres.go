@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"microsvc/common/utils"
 	"os"
+	"strings"
 
 	_ "github.com/lib/pq"
 )
@@ -62,7 +63,41 @@ func (ps *Storage) Ping() error {
 }
 
 // ExecuteQuery - INSERT, UPDATE, DELETE
-func (ps *Storage) ExecuteQuery(query string, args ...interface{}) error {
+func (ps *Storage) ExecuteQuery(query string, args ...interface{}) (int64, error) {
+	var id int64
+	err := ps.db.QueryRow(query, args...).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+// ExecuteUpdate выполняет UPDATE с динамическим списком полей
+func (ps *Storage) ExecuteUpdate(table string, id int64, updates map[string]interface{}) error {
+	if len(updates) == 0 {
+		return fmt.Errorf("no fields to update")
+	}
+
+	var (
+		setClauses []string
+		args       []interface{}
+		argIdx     = 1 // PostgreSQL использует $1, $2, ...
+	)
+
+	// Формируем список SET field=$1, field2=$2, ...
+	for field, value := range updates {
+		setClauses = append(setClauses, fmt.Sprintf("%s=$%d", field, argIdx))
+		args = append(args, value)
+		argIdx++
+	}
+
+	// Добавляем ID в параметры
+	args = append(args, id)
+
+	// Собираем запрос
+	query := fmt.Sprintf("UPDATE %s SET %s WHERE id=$%d", table, strings.Join(setClauses, ", "), argIdx)
+
+	// Выполняем
 	_, err := ps.db.Exec(query, args...)
 	return err
 }
@@ -108,4 +143,8 @@ func (ps *Storage) GetData(query string, args ...interface{}) ([]map[string]inte
 	}
 
 	return result, nil
+}
+
+func (ps *Storage) DB() *sql.DB {
+	return ps.db
 }

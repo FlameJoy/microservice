@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 
@@ -12,11 +11,13 @@ import (
 	pbAuth "microsvc/auth-service/proto"
 	"microsvc/common/utils"
 	pbOrder "microsvc/order-service/proto"
+	pbProduct "microsvc/product-service/proto"
 
 	"net"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -25,9 +26,10 @@ var (
 
 type grpcServer struct {
 	pbGateway.GatewayServiceServer
-	authClient  pbAuth.AuthServiceClient
-	orderClient pbOrder.OrderServiceClient
-	logger      *utils.CustomLogger
+	authClient    pbAuth.AuthServiceClient
+	productClient pbProduct.ProductServiceClient
+	orderClient   pbOrder.OrderServiceClient
+	logger        *utils.CustomLogger
 }
 
 func NewGRPCServer(authSvcAddr string, orderSvcAddr string, logger *utils.CustomLogger) (*grpcServer, error) {
@@ -88,6 +90,51 @@ func (s *grpcServer) Register(ctx context.Context, req *pbGateway.GatewayRegiste
 	}, nil
 }
 
+func (s *grpcServer) CreateProduct(ctx context.Context, req *pbGateway.GatewayCreateProductReq) (*pbGateway.GatewayCreateProductResp, error) {
+	// createReq := &pbProduct.CreateReq{
+	// 	SKU:      req.SKU,
+	// 	Name:     req.Name,
+	// 	Price:    req.Price,
+	// 	Category: req.Category,
+	// 	UOM:      req.UOM,
+	// 	Brand:    req.Brand,
+	// 	Stock:    req.Stock,
+	// }
+
+	createReq := &pbProduct.CreateReq{}
+	proto.Merge(createReq, req)
+
+	s.logger.Info("api gateway: starts gRPC server CreateProduct func")
+
+	resp, err := s.productClient.Create(ctx, createReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pbGateway.GatewayCreateProductResp{
+		Id:      resp.Id,
+		Message: resp.Message,
+	}, err
+}
+
+func (s *grpcServer) UpdateProduct(ctx context.Context, req *pbGateway.GatewayUpdateProductReq) (*pbGateway.GatewayUpdateProductResp, error) {
+	// Проксируем обновления в ProductService
+	updateReq := &pbProduct.UpdateReq{
+		SqlQuery: req.SqlQuery,
+		Args:     req.Args,
+	}
+
+	updateResp, err := s.productClient.Update(ctx, updateReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pbGateway.GatewayUpdateProductResp{
+		Success: updateResp.Success,
+		Message: updateResp.Message,
+	}, nil
+}
+
 func (s *grpcServer) CreateOrder(ctx context.Context, req *pbGateway.GatewayOrderCreateReq) (*pbGateway.GatewayOrderCreateResp, error) {
 	orderReq := &pbOrder.CreateReq{
 		ItemID:   req.ItemID,
@@ -97,8 +144,6 @@ func (s *grpcServer) CreateOrder(ctx context.Context, req *pbGateway.GatewayOrde
 	}
 
 	s.logger.Info("api gateway: starts gRPC server CreateOrder func")
-
-	fmt.Println(orderReq)
 
 	orderResp, err := s.orderClient.Create(ctx, orderReq)
 	if err != nil {

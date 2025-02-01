@@ -109,3 +109,7 @@ func (ch *Storage) GetData(query string, args ...interface{}) ([]map[string]inte
 
 	return result, nil
 }
+
+func (ch *Storage) DB() *sql.DB {
+	return ch.db
+}

@@ -40,13 +40,14 @@ func RecoverMW(logger *utils.CustomLogger) Middleware {
 	}
 }
 
-type KeyUser struct{}
+type KeyToken struct{}
 
 func AuthMW(logger *utils.CustomLogger) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			tokenStr := r.Header.Get("Authorization")
 			tokenStr = tokenStr[len(bearerPrefix):]
+
 			token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 					return nil, jwt.NewValidationError("invalid signing method", jwt.ValidationErrorSignatureInvalid)
@@ -57,7 +58,6 @@ func AuthMW(logger *utils.CustomLogger) Middleware {
 			if err != nil || !token.Valid {
 				http.Error(w, "token cannot be parsed or isn't valid", http.StatusUnauthorized)
 				return
-				// return nil, errors.New("token cannot be parsed or isn't valid")
 			}
 
 			claims, ok := token.Claims.(jwt.MapClaims)
@@ -70,8 +70,10 @@ func AuthMW(logger *utils.CustomLogger) Middleware {
 				http.Error(w, "can't retrive a user id from token", http.StatusUnauthorized)
 				return
 			}
-			ctx := context.WithValue(context.Background(), KeyUser{}, userID)
+
+			ctx := context.WithValue(context.Background(), KeyToken{}, userID)
 			req := r.WithContext(ctx)
+
 			next.ServeHTTP(w, req)
 		})
 	}

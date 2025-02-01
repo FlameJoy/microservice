@@ -3,12 +3,15 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"microsvc/api-gateway/proto"
 	"microsvc/common/utils"
 	"microsvc/data"
-	"microsvc/middleware"
 	"net/http"
+	"strings"
+	"time"
+	"unicode"
 )
 
 type handler struct {
@@ -40,13 +43,12 @@ func (h *handler) UserValidate(next http.HandlerFunc) http.HandlerFunc {
 			utils.HttpRespErrRFC9457("UserValidate", "Validation error", err, http.StatusBadRequest, w, r, h.logger)
 			return
 		}
-		fmt.Println("ERROR")
+
 		// Password validation
 		if err := u.ValidatePswd(); err != nil {
 			utils.HttpRespErrRFC9457("UserValidate", "Validation error", err, http.StatusBadRequest, w, r, h.logger)
 			return
 		}
-		fmt.Println("ERROR")
 		ctx := context.WithValue(context.Background(), KeyUser{}, u)
 		req := r.WithContext(ctx)
 		next.ServeHTTP(w, req)
@@ -130,21 +132,177 @@ func (h *handler) ProxyAuthReq(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type KeyProduct struct{}
+
+func (h *handler) ProductValidate(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := data.Product{}
+
+		if err := p.FromJSON(r.Body); err != nil {
+			utils.HttpRespErrRFC9457("ProductValidate", "FromJSON error", err, http.StatusBadRequest, w, r, h.logger)
+			return
+		}
+
+		if err := p.Validate(); err != nil {
+			utils.HttpRespErrRFC9457("ProductValidate", "Validation error", err, http.StatusBadRequest, w, r, h.logger)
+			return
+		}
+
+		ctx := context.WithValue(context.Background(), KeyProduct{}, p)
+		req := r.WithContext(ctx)
+		next.ServeHTTP(w, req)
+	})
+}
+
 func (h *handler) ProxyCreateProduct(w http.ResponseWriter, r *http.Request) {
-	value := r.Context().Value(middleware.KeyUser{})
-	idStr, ok := value.(string)
+	value := r.Context().Value(KeyProduct{})
+	p, ok := value.(data.Product)
 	if !ok {
 		utils.HttpRespErrRFC9457("ProxyCreateProduct", "Interface conversion error", fmt.Errorf("%v is not string", value), http.StatusInternalServerError, w, r, h.logger)
 		return
 	}
 
-	resp := map[string]string{
-		"user_id": idStr,
+	req := proto.GatewayCreateProductReq{
+		SKU:      utils.GenRandNums(10),
+		Name:     p.Name,
+		Price:    int64(p.Price),
+		Category: p.Category,
+		UOM:      p.UOM,
+		Brand:    p.Brand,
+		Stock:    int64(p.Stock),
 	}
+
+	resp, err := GatewayServer.CreateProduct(context.Background(), &req)
+	if err != nil {
+		utils.HttpRespErrRFC9457("ProxyCreateProduct", "GatewayServer.CreateProduct error", err, http.StatusInternalServerError, w, r, h.logger)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(&resp); err != nil {
 		utils.HttpRespErrRFC9457("ProxyRegReq", "Encode error", err, http.StatusInternalServerError, w, r, h.logger)
+		return
+	}
+}
+
+func (h *handler) ProxyUpdateProduct(w http.ResponseWriter, r *http.Request) {
+	var p data.Product
+	if err := p.FromJSON(r.Body); err != nil {
+		utils.HttpRespErrRFC9457("ProxyUpdateProduct", "FromJSON error", err, http.StatusBadRequest, w, r, h.logger)
+		return
+	}
+
+	var setClauses []string
+	var args []interface{}
+	argIdx := 1
+
+	if p.ID == 0 {
+		utils.HttpRespErrRFC9457("ProxyUpdateProduct", "Validation", errors.New("no product ID"), http.StatusBadRequest, w, r, h.logger)
+		return
+	}
+
+	if p.Name != "" {
+		if len(p.Name) > 50 {
+			utils.HttpRespErrRFC9457("ProxyUpdateProduct", "Validation", errors.New("product name too long"), http.StatusBadRequest, w, r, h.logger)
+			return
+		}
+
+		for _, char := range p.Name {
+			if !unicode.IsLetter(char) && !unicode.IsDigit(char) {
+				utils.HttpRespErrRFC9457("ProxyUpdateProduct", "Validation", errors.New("product name must contain only letters and numbers"), http.StatusBadRequest, w, r, h.logger)
+				return
+			}
+		}
+
+		setClauses = append(setClauses, fmt.Sprintf("name=$%d", argIdx))
+		args = append(args, p.Name)
+		argIdx++
+	}
+
+	if p.Price > 0 {
+		setClauses = append(setClauses, fmt.Sprintf("price=$%d", argIdx))
+		args = append(args, p.Price)
+		argIdx++
+	}
+
+	if p.Category != "" {
+		if len(p.Category) > 50 {
+			utils.HttpRespErrRFC9457("ProxyUpdateProduct", "Validation", errors.New("category too long"), http.StatusBadRequest, w, r, h.logger)
+			return
+		}
+
+		for _, char := range p.Name {
+			if !unicode.IsLetter(char) && !unicode.IsDigit(char) {
+				utils.HttpRespErrRFC9457("ProxyUpdateProduct", "Validation", errors.New("category must contain only letters and numbers"), http.StatusBadRequest, w, r, h.logger)
+				return
+			}
+		}
+
+		setClauses = append(setClauses, fmt.Sprintf("category=$%d", argIdx))
+		args = append(args, p.Category)
+		argIdx++
+	}
+
+	if p.UOM != "" {
+		setClauses = append(setClauses, fmt.Sprintf("uom=$%d", argIdx))
+		args = append(args, p.UOM)
+		argIdx++
+	}
+
+	if p.Brand != "" {
+		if len(p.Brand) > 50 {
+			utils.HttpRespErrRFC9457("ProxyUpdateProduct", "Validation", errors.New("brand too long"), http.StatusBadRequest, w, r, h.logger)
+			return
+		}
+
+		for _, char := range p.Name {
+			if !unicode.IsLetter(char) && !unicode.IsDigit(char) {
+				utils.HttpRespErrRFC9457("ProxyUpdateProduct", "Validation", errors.New("brand must contain only letters and numbers"), http.StatusBadRequest, w, r, h.logger)
+				return
+			}
+		}
+
+		setClauses = append(setClauses, fmt.Sprintf("brand=$%d", argIdx))
+		args = append(args, p.Brand)
+		argIdx++
+	}
+
+	// Добавляем updated_at
+	setClauses = append(setClauses, fmt.Sprintf("updated_at=$%d", argIdx))
+	args = append(args, time.Now())
+	argIdx++
+
+	// Если нет обновляемых полей
+	if len(setClauses) == 0 {
+		utils.HttpRespErrRFC9457("ProxyUpdateProduct", "Validation", errors.New("no fields to update"), http.StatusBadRequest, w, r, h.logger)
+		return
+	}
+
+	// Собираем SQL-запрос
+	update := fmt.Sprintf("UPDATE products SET %s WHERE id=$%d", strings.Join(setClauses, ", "), argIdx)
+	args = append(args, p.ID) // Добавляем ID в конец
+
+	req := proto.GatewayUpdateProductReq{
+		SqlQuery: update,
+		Args:     utils.ArgsToStringSlice(args), // Преобразуем аргументы в строки
+	}
+
+	resp, err := GatewayServer.UpdateProduct(context.Background(), &req)
+	if err != nil {
+		utils.HttpRespErrRFC9457("ProxyCreateProduct", "GatewayServer.CreateProduct error", err, http.StatusInternalServerError, w, r, h.logger)
+		return
+	}
+
+	if !resp.Success {
+		utils.HttpRespErrRFC9457("ProxyCreateProduct", "GatewayServer.CreateProduct error", errors.New(resp.Message), http.StatusInternalServerError, w, r, h.logger)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(&resp); err != nil {
+		utils.HttpRespErrRFC9457("ProxyUpdateProduct", "Encode error", err, http.StatusInternalServerError, w, r, h.logger)
 		return
 	}
 }

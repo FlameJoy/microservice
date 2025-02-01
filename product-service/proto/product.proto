@@ -12,7 +12,7 @@ service ProductService {
 }
 
 message CreateReq {
-    int64 SKU = 1;
+    string SKU = 1;
     string Name = 2;
     int64 Price = 3;
     string Category = 4;
@@ -27,17 +27,12 @@ message CreateResp {
 }
 
 message UpdateReq {
-    int64 SKU = 1;
-    string Name = 2;
-    int64 Price = 3;
-    string Category = 4;
-    string UOM = 5;
-    string Brand = 6;
-    int64 Stock = 7;  
+    string sqlQuery = 1;
+    repeated string args = 2; // Аргументы запроса 
 }
 
 message UpdateResp {
-    int64 id = 1;
+    bool success = 1;  // Флаг успешного выполнения
     string message = 2;
 }
 

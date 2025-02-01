@@ -142,7 +142,7 @@ func (s *AuthServer) NewUser(req *proto.RegRequest) error {
 
 	// Save user
 	query := "INSERT INTO users (username, email, pswd_hash, ver_hash, timeout_at, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)"
-	if err = s.storage.ExecuteQuery(query, req.Username, req.Email, u.PswdHash, u.VerHash, u.TimeoutAt, time.Now().Local(), time.Now().Local()); err != nil {
+	if _, err = s.storage.ExecuteQuery(query, req.Username, req.Email, u.PswdHash, u.VerHash, u.TimeoutAt, time.Now().Local(), time.Now().Local()); err != nil {
 		s.logger.Error("Storage error: %v", err)
 		return err
 	}

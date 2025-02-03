@@ -11,16 +11,16 @@ service OrderService {
 }
 
 message CreateReq {
-    int32 itemID = 1;
-    string name = 2;
-    int32 quantity = 3;
-    int32 price = 4;
+    int64 user_id = 1;
+    int64 product_id = 2;
+    int64 quantity = 3;
 }
-
-message CreateResp {
-    int32 ID = 1;
-    string name = 2;
-    int32 totalSum = 3;
+  
+  message CreateResp {
+    int64 id = 1;
+    int32 totalSum = 2;
+    string status = 3;
+    string message = 4;
 }
 
 message UpdateReq {

@@ -5,6 +5,7 @@ import (
 	"microsvc/common/utils"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -46,6 +47,10 @@ func AuthMW(logger *utils.CustomLogger) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			tokenStr := r.Header.Get("Authorization")
+			if tokenStr == "" {
+				http.Error(w, "token is empty", http.StatusUnauthorized)
+				return
+			}
 			tokenStr = tokenStr[len(bearerPrefix):]
 
 			token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
@@ -71,7 +76,13 @@ func AuthMW(logger *utils.CustomLogger) Middleware {
 				return
 			}
 
-			ctx := context.WithValue(context.Background(), KeyToken{}, userID)
+			id, err := strconv.Atoi(userID)
+			if err != nil {
+				http.Error(w, "strconv.Atoi error", http.StatusUnauthorized)
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), KeyToken{}, id)
 			req := r.WithContext(ctx)
 
 			next.ServeHTTP(w, req)

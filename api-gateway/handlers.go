@@ -8,6 +8,7 @@ import (
 	"microsvc/api-gateway/proto"
 	"microsvc/common/utils"
 	"microsvc/data"
+	"microsvc/middleware"
 	"net/http"
 	"strings"
 	"time"
@@ -307,56 +308,95 @@ func (h *handler) ProxyUpdateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// type KeyOrder struct{}
+func (h *handler) ProxyDeleteProduct(w http.ResponseWriter, r *http.Request) {
+	data := make(map[string]int)
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		utils.HttpRespErrRFC9457("ProxyDeleteProduct", "Decode error", err, http.StatusBadRequest, w, r, h.logger)
+		return
+	}
+	id, ok := data["id"]
+	if !ok {
+		utils.HttpRespErrRFC9457("ProxyDeleteProduct", "missing ID", errors.New("missing ID"), http.StatusBadRequest, w, r, h.logger)
+		return
 
-// func (h *handler) OrderValidate(next http.HandlerFunc) http.HandlerFunc {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		o := data.Order{}
+	}
 
-// 		o.FromJSON(r.Body)
+	req := proto.GatewayDeleteProductReq{
+		Id: int64(id),
+	}
 
-// 		validate := validator.New(validator.WithRequiredStructEnabled())
+	resp, err := GatewayServer.DeleteProduct(r.Context(), &req)
+	if err != nil {
+		utils.HttpRespErrRFC9457("ProxyDeleteProduct", "GatewayServer.DeleteProduct error", err, http.StatusInternalServerError, w, r, h.logger)
+		return
+	}
 
-// 		if err := validate.Struct(o); err != nil {
-// 			utils.HttpRespErrRFC9457("OrderValidate", "Validation error", err, http.StatusBadRequest, w, r, h.logger)
-// 			return
-// 		}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(&resp); err != nil {
+		utils.HttpRespErrRFC9457("ProxyDeleteProduct", "Encode error", err, http.StatusInternalServerError, w, r, h.logger)
+		return
+	}
+}
 
-// 		ctx := context.WithValue(context.Background(), KeyOrder{}, o)
-// 		req := r.WithContext(ctx)
-// 		next.ServeHTTP(w, req)
-// 	})
-// }
+type KeyOrder struct{}
 
-// func (h *handler) ProxyOrderCreate(w http.ResponseWriter, r *http.Request) {
-// 	value := r.Context().Value(KeyOrder{})
-// 	o, ok := value.(data.Order)
-// 	if !ok {
-// 		utils.HttpRespErrRFC9457("ProxyOrderCreate", "Interface conversion error", fmt.Errorf("%v is nil, not data.Order", o), http.StatusInternalServerError, w, r, h.logger)
-// 		return
-// 	}
+func (h *handler) OrderValidate(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		o := data.Order{}
 
-// 	req := proto.GatewayOrderCreateReq{
-// 		ItemID:   int32(o.ItemID),
-// 		Name:     o.Name,
-// 		Quantity: int32(o.Quantity),
-// 		Price:    int32(o.Price),
-// 	}
+		if err := o.FromJSON(r.Body); err != nil {
+			utils.HttpRespErrRFC9457("OrderValidate", "FromJSON error", err, http.StatusBadRequest, w, r, h.logger)
+			return
+		}
 
-// 	h.logger.Info("Received order data, redirect to gRPC server")
+		if err := o.Validate(); err != nil {
+			utils.HttpRespErrRFC9457("OrderValidate", "Validation error", err, http.StatusBadRequest, w, r, h.logger)
+			return
+		}
 
-// 	resp, err := GatewayServer.CreateOrder(r.Context(), &req)
-// 	if err != nil {
-// 		utils.HttpRespErrRFC9457("ProxyOrderCreate", "GatewayServer.CreateOrder error", err, http.StatusInternalServerError, w, r, h.logger)
-// 		return
-// 	}
+		ctx := context.WithValue(r.Context(), KeyOrder{}, o)
+		req := r.WithContext(ctx)
+		next.ServeHTTP(w, req)
+	})
+}
 
-// 	h.logger.Info("Received gRPC server response, send to client")
+func (h *handler) ProxyOrderCreate(w http.ResponseWriter, r *http.Request) {
+	value := r.Context().Value(KeyOrder{})
+	o, ok := value.(data.Order)
+	if !ok {
+		utils.HttpRespErrRFC9457("ProxyOrderCreate", "Interface conversion error", fmt.Errorf("%v is not data.Order", o), http.StatusInternalServerError, w, r, h.logger)
+		return
+	}
 
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(http.StatusOK)
-// 	if err = json.NewEncoder(w).Encode(&resp); err != nil {
-// 		utils.HttpRespErrRFC9457("ProxyOrderCreate", "Encode error", err, http.StatusInternalServerError, w, r, h.logger)
-// 		return
-// 	}
-// }
+	// User id from token
+	value = r.Context().Value(middleware.KeyToken{})
+	userID, ok := value.(int)
+	if !ok {
+		utils.HttpRespErrRFC9457("ProxyOrderCreate", "Interface conversion error", fmt.Errorf("%v is not int", userID), http.StatusInternalServerError, w, r, h.logger)
+		return
+	}
+
+	req := proto.GatewayOrderCreateReq{
+		UserId:    int64(userID),
+		ProductId: int64(o.ProductID),
+		Quantity:  int64(o.Quantity),
+	}
+
+	h.logger.Info("Received order data, redirect to gRPC server")
+
+	resp, err := GatewayServer.CreateOrder(r.Context(), &req)
+	if err != nil {
+		utils.HttpRespErrRFC9457("ProxyOrderCreate", "GatewayServer.CreateOrder error", err, http.StatusInternalServerError, w, r, h.logger)
+		return
+	}
+
+	h.logger.Info("Received gRPC server response, send to client")
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(&resp); err != nil {
+		utils.HttpRespErrRFC9457("ProxyOrderCreate", "Encode error", err, http.StatusInternalServerError, w, r, h.logger)
+		return
+	}
+}

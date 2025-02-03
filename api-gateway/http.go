@@ -92,16 +92,13 @@ func registerHandlers(h *handler, mux *http.ServeMux) {
 	api.POST("/register", h.UserValidate(h.ProxyRegReq))
 	api.POST("/auth", h.ProxyAuthReq)
 
-	// profile := api.Group("/profile")
-	// profile.GET("", h.ProxyProfile)
-	// profile.GET("/user/id")
-
 	product := api.Group("/product")
 	product.Use(middleware.AuthMW(h.logger))
 	product.POST("/new", h.ProductValidate(h.ProxyCreateProduct))
 	product.PUT("/update", h.ProxyUpdateProduct)
+	product.DELETE("/delete", h.ProxyDeleteProduct)
 
-	// Order
-	// order := api.Group("/order")
-	// order.POST("/create", h.OrderValidate(h.ProxyOrderCreate))
+	order := api.Group("/order")
+	order.Use(middleware.AuthMW(h.logger))
+	order.POST("/create", h.OrderValidate(h.ProxyOrderCreate))
 }

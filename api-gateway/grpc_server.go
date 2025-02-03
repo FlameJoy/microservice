@@ -141,12 +141,26 @@ func (s *grpcServer) UpdateProduct(ctx context.Context, req *pbGateway.GatewayUp
 	}, nil
 }
 
+func (s *grpcServer) DeleteProduct(ctx context.Context, req *pbGateway.GatewayDeleteProductReq) (*pbGateway.GatewayDeleteProductResp, error) {
+	deleteReq := &pbProduct.DeleteReq{
+		Id: req.Id,
+	}
+
+	resp, err := s.productClient.Delete(ctx, deleteReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pbGateway.GatewayDeleteProductResp{
+		Message: resp.Message,
+	}, nil
+}
+
 func (s *grpcServer) CreateOrder(ctx context.Context, req *pbGateway.GatewayOrderCreateReq) (*pbGateway.GatewayOrderCreateResp, error) {
 	orderReq := &pbOrder.CreateReq{
-		ItemID:   req.ItemID,
-		Name:     req.Name,
-		Quantity: req.Quantity,
-		Price:    req.Price,
+		UserId:    req.UserId,
+		ProductId: req.ProductId,
+		Quantity:  req.Quantity,
 	}
 
 	s.logger.Info("api gateway: starts gRPC server CreateOrder func")
@@ -157,9 +171,10 @@ func (s *grpcServer) CreateOrder(ctx context.Context, req *pbGateway.GatewayOrde
 	}
 
 	return &pbGateway.GatewayOrderCreateResp{
-		ID:       orderResp.ID,
-		Name:     orderResp.Name,
+		Id:       orderResp.Id,
 		TotalSum: orderResp.TotalSum,
+		Status:   orderResp.Status,
+		Message:  orderResp.Message,
 	}, nil
 }
 

@@ -67,3 +67,16 @@ func (s *ProductServer) Update(ctx context.Context, req *proto.UpdateReq) (*prot
 		Message: "Product updated successfully",
 	}, nil
 }
+
+func (s *ProductServer) Delete(ctx context.Context, req *proto.DeleteReq) (*proto.DeleteResp, error) {
+	s.logger.Info("product svc: starts gRPC server Delete func")
+
+	err := s.storage.ExecuteUpdate("products", req.Id, map[string]interface{}{"deleted_at": time.Now().Local().Format(time.RFC3339)})
+	if err != nil {
+		return nil, err
+	}
+
+	return &proto.DeleteResp{
+		Message: "success",
+	}, nil
+}

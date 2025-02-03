@@ -3,6 +3,7 @@ package main
 import (
 	"microsvc/common/utils"
 	"microsvc/order-service/proto"
+	"microsvc/storage"
 	"net"
 	"os"
 	"os/signal"
@@ -10,10 +11,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-func StartGRPCServer(address string, logger *utils.CustomLogger) {
+func StartGRPCServer(address string, logger *utils.CustomLogger, storage storage.Storage) {
 	server := grpc.NewServer()
 
-	proto.RegisterOrderServiceServer(server, &OrderServer{logger: logger})
+	proto.RegisterOrderServiceServer(server, &OrderServer{logger: logger, storage: storage})
 
 	listener, err := net.Listen("tcp", address)
 	if err != nil {

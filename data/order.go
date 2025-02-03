@@ -2,15 +2,19 @@ package data
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"time"
 )
 
 type Order struct {
-	ItemID    int       `json:"item_id" validate:"required"`
-	Name      string    `json:"name" validate:"required"`
-	Quantity  int       `json:"quantity" validate:"required,gte=0"`
-	TotalSum  int       `json:"total_sum" validate:"required,gte=0"`
+	ID        int       `json:"id"`
+	UserID    int       `json:"user_id"`
+	ProductID int       `json:"product_id"`
+	Quantity  int       `json:"quantity"`
+	Price     int       `json:"price"`
+	TotalSum  int       `json:"total_sum"`
+	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"-"`
 	UpdatedAt time.Time `json:"-"`
 	DeletedAt time.Time `json:"-"`
@@ -24,4 +28,18 @@ func (o *Order) ToJSON(w io.Writer) error {
 func (o *Order) FromJSON(r io.Reader) error {
 	d := json.NewDecoder(r)
 	return d.Decode(o)
+}
+
+func (o *Order) Validate() error {
+	if o.UserID == 0 {
+		return errors.New("missing user_id")
+	}
+	if o.ProductID == 0 {
+		return errors.New("missing product_id")
+	}
+	if o.Quantity == 0 {
+		return errors.New("quantity is 0")
+	}
+
+	return nil
 }
